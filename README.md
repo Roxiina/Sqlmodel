@@ -113,9 +113,6 @@ BookBase (title, author)
 - [SQLModel Official Documentation](https://sqlmodel.tiangolo.com/)
 - [FastAPI : SQL (Relational) Databases](https://fastapi.tiangolo.com/tutorial/sql-databases/)
 - [SQLModel and Pydantic Integration Guide (Moltres Docs)](https://moltres.readthedocs.io/en/stable/guides/sqlmodel-integration.html)
-- *Is SQLModel better than using SQLAlchemy and Pydantic?* (Python in Plain English)
-- *SQL DDL to SQLModel Converter* (Safe Web Utils)
-- *What is table=True inside a subclass of SQLModel?* (Stack Overflow)
 
 ### Documentation SQLModel
 
