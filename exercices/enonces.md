@@ -1,15 +1,19 @@
 # Exercices — SQLModel
 
-Six exercices classés du **plus simple au plus difficile**. Vous codez dans `exercices_sqlmodel_start.py` et vous vérifiez vous-même avec `pytest`. Le but : trouver la réponse seul·e.
+Six exercices classés du **plus simple au plus difficile**. Chaque exercice a son dossier, avec sa solution (`solution_exerciceN.py`) et ses tests (`test_exerciceN.py`).
 
 ## Fichiers
 
-| Fichier | À quoi il sert |
+| Dossier / fichier | À quoi il sert |
 |---|---|
-| `exercices_sqlmodel.md` | Ce document — les énoncés |
-| `exercices_sqlmodel_start.py` | Le fichier à compléter (vos réponses vont ici) |
-| `test_exercices_sqlmodel.py` | Les tests qui vérifient vos réponses (ne pas modifier) |
-| `sqlmodel_presentation.html` | La présentation du cours (à ouvrir dans un navigateur) |
+| `enonces.md` | Ce document — les énoncés |
+| `exercice_1_tagread/` | Exercice 1 |
+| `exercice_2_3_category/` | Exercices 2 et 3 (ils modifient la même classe `Category`) |
+| `exercice_4_product/` | Exercice 4 |
+| `exercice_5_book/` | Exercice 5 |
+| `exercice_6_author_novel/` | Exercice 6 |
+| `../cours/01_presentation_sqlmodel.html` | La présentation du cours (à ouvrir dans un navigateur) |
+| `../cours/02_cours_complet_sqlmodel.html` | Le cours complet et détaillé |
 
 ## Installation (une seule fois)
 
@@ -21,14 +25,14 @@ pip install sqlmodel pytest
 
 ## Méthode de travail
 
-1. Ouvrez `exercices_sqlmodel_start.py` et cherchez `TODO — Exercice 1`. Écrivez votre code juste en dessous.
-2. Lancez uniquement le test de cet exercice :
+1. Ouvrez le dossier de l'exercice, par exemple `exercice_1_tagread/solution_exercice1.py`.
+2. Lancez uniquement le test de cet exercice (depuis la racine du dépôt) :
    ```bash
-   pytest test_exercices_sqlmodel.py -k exercice1 -v
+   pytest exercices/exercice_1_tagread -v
    ```
 3. **Lisez le message d'erreur.** Il dit précisément ce qui manque ou ce qui est faux : c'est fait pour que vous puissiez corriger seul·e.
 4. Si vous êtes bloqué·e après plusieurs essais, dépliez l'**indice**.
-5. Quand l'exercice est vert, passez au suivant. À la fin, `pytest test_exercices_sqlmodel.py -v` doit tout afficher en vert.
+5. Quand l'exercice est vert, passez au suivant. À la fin, `pytest exercices -v` doit tout afficher en vert.
 
 ---
 

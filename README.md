@@ -6,15 +6,25 @@ Les six exercices sont résolus et les **29 tests passent**.
 
 ## Contenu du dépôt
 
-| Fichier | Rôle |
-|---|---|
-| `exercices_sqlmodel_start.py` | Les réponses aux 6 exercices, commentées |
-| `test_exercices_sqlmodel.py` | Les tests pytest qui vérifient les réponses |
-| `exercices_sqlmodel_eleve.md` | Les énoncés des exercices |
-| `sqlmodel_cours_debutant.html` | Le cours pour débutants (à ouvrir dans un navigateur) |
-| `sqlmodel_presentation.html` | La présentation interactive avec QCM et exercices |
-| `sqlmodel_exercices.zip` | L'archive d'origine des exercices |
-| `main.py` | Exemple complet : une table `Hero` dans une base SQLite |
+```
+cours/
+├── 01_presentation_sqlmodel.html     ← 1re présentation : diapositives, QCM, exercices interactifs
+└── 02_cours_complet_sqlmodel.html    ← 2e cours, plus complet et plus détaillé, avec lexique
+exercices/
+├── enonces.md                        ← les énoncés et les indices
+├── exercice_1_tagread/
+├── exercice_2_3_category/            ← les exercices 2 et 3 modifient la même classe
+├── exercice_4_product/
+├── exercice_5_book/
+└── exercice_6_author_novel/
+main.py                               ← exemple complet : une table Hero dans une base SQLite
+```
+
+Chaque dossier d'exercice contient deux fichiers :
+- `solution_exerciceN.py` : la solution commentée ;
+- `test_exerciceN.py` : les tests pytest qui la vérifient.
+
+Les cours s'ouvrent dans un navigateur. Dans l'ordre, commence par la présentation (`01`), puis lis le cours complet (`02`).
 
 ## Installation
 
@@ -30,8 +40,8 @@ pip install -r requirements.txt
 ## Lancer les tests
 
 ```bash
-pytest test_exercices_sqlmodel.py -v              # tous les exercices
-pytest test_exercices_sqlmodel.py -k exercice3 -v # un seul exercice
+pytest exercices -v                          # tous les exercices
+pytest exercices/exercice_4_product -v       # un seul exercice
 ```
 
 ## Lancer l'exemple
@@ -83,10 +93,10 @@ BookBase (title, author)
 
 ### Supports du cours (dans ce dépôt)
 
-- `sqlmodel_cours_debutant.html` : le cours pour débutants (bases de données, classes, `table=True`, héritage, relations)
-- `sqlmodel_presentation.html` : les diapositives, les exemples `Hero` / `Author` / `Novel` et l'explication du piège de la validation
-- `exercices_sqlmodel_eleve.md` : les énoncés et les indices
-- `test_exercices_sqlmodel.py` : les tests, qui précisent le comportement attendu de chaque classe
+- `cours/01_presentation_sqlmodel.html` : les diapositives, les exemples `Hero` / `Author` / `Novel` et l'explication du piège de la validation
+- `cours/02_cours_complet_sqlmodel.html` : le cours détaillé (bases de données, classes, `table=True`, héritage, relations, lexique)
+- `exercices/enonces.md` : les énoncés et les indices
+- `exercices/*/test_exercice*.py` : les tests, qui précisent le comportement attendu de chaque classe
 
 ### Sources utilisées pour la présentation
 
