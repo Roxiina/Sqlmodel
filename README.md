@@ -17,7 +17,6 @@ exercices/
 ├── exercice_4_product/
 ├── exercice_5_book/
 └── exercice_6_author_novel/
-main.py                               ← exemple complet : une table Hero dans une base SQLite
 ```
 
 Chaque dossier d'exercice contient deux fichiers :
@@ -53,14 +52,6 @@ Pour vérifier les corrections à la place de vos fichiers :
 CORRECTION=1 pytest exercices -v                          # bash (Git Bash, macOS, Linux)
 $env:CORRECTION=1; pytest exercices -v; $env:CORRECTION=$null   # PowerShell
 ```
-
-## Lancer l'exemple
-
-```bash
-python main.py
-```
-
-Le script crée `database.db`, ajoute trois héros puis les affiche.
 
 ## Les exercices
 
