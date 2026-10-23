@@ -1,2 +1,10 @@
-sqlmodel
-pytest
+# Python 3.10 ou plus récent est requis (syntaxe int | None).
+# SQLite est inclus dans Python : rien à installer pour la base de données.
+
+# SQLModel et les deux bibliothèques qu'il réunit
+sqlmodel>=0.0.48
+pydantic>=2.12
+sqlalchemy>=2.0
+
+# Lancer les tests des exercices
+pytest>=9.0
