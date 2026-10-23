@@ -1,6 +1,6 @@
 # Exercices — SQLModel
 
-Six exercices classés du **plus simple au plus difficile**. Chaque exercice a son dossier, avec sa solution (`solution_exerciceN.py`) et ses tests (`test_exerciceN.py`).
+Six exercices classés du **plus simple au plus difficile**. Chaque exercice a son dossier, avec le fichier à compléter (`exerciceN.py`), les tests (`test_exerciceN.py`) et la correction (`correction_exerciceN.py`). Le but : trouver la réponse seul·e.
 
 ## Fichiers
 
@@ -25,13 +25,13 @@ pip install sqlmodel pytest
 
 ## Méthode de travail
 
-1. Ouvrez le dossier de l'exercice, par exemple `exercice_1_tagread/solution_exercice1.py`.
+1. Ouvrez le dossier de l'exercice, par exemple `exercice_1_tagread/exercice1.py`, et écrivez votre code sous le `TODO`.
 2. Lancez uniquement le test de cet exercice (depuis la racine du dépôt) :
    ```bash
    pytest exercices/exercice_1_tagread -v
    ```
 3. **Lisez le message d'erreur.** Il dit précisément ce qui manque ou ce qui est faux : c'est fait pour que vous puissiez corriger seul·e.
-4. Si vous êtes bloqué·e après plusieurs essais, dépliez l'**indice**.
+4. Si vous êtes bloqué·e après plusieurs essais, dépliez l'**indice**. En dernier recours, ouvrez `correction_exerciceN.py`.
 5. Quand l'exercice est vert, passez au suivant. À la fin, `pytest exercices -v` doit tout afficher en vert.
 
 ---

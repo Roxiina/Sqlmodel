@@ -1,11 +1,20 @@
 """Tests de l'exercice 4.
 
     pytest exercices/exercice_4_product -v
+
+Pour tester la correction à la place de votre fichier :
+    CORRECTION=1 pytest exercices/exercice_4_product -v
 """
+
+import importlib
+import os
 
 import pytest
 from sqlmodel import SQLModel
-import solution_exercice4 as ex
+
+ex = importlib.import_module(
+    "correction_exercice4" if os.environ.get("CORRECTION") else "exercice4"
+)
 
 
 def get_fields(model):

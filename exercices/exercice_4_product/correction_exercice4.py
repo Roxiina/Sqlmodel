@@ -1,6 +1,7 @@
-"""Exercice 4 — solution.
+"""Exercice 4 — correction.
 
-Tester : pytest exercices/exercice_4_product -v
+À ne regarder qu'en cas de blocage !
+Tester la correction : CORRECTION=1 pytest exercices/exercice_4_product -v
 """
 
 from sqlmodel import SQLModel, Field, Relationship

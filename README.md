@@ -2,7 +2,7 @@
 
 Six exercices sur [SQLModel](https://sqlmodel.tiangolo.com/), la bibliothèque qui réunit **Pydantic** (validation des données) et **SQLAlchemy** (base de données) dans une seule classe Python.
 
-Les six exercices sont résolus et les **29 tests passent**.
+Chaque exercice a un fichier à compléter, des tests pour vérifier sa réponse, et une correction si besoin.
 
 ## Contenu du dépôt
 
@@ -21,8 +21,9 @@ main.py                               ← exemple complet : une table Hero dans 
 ```
 
 Chaque dossier d'exercice contient deux fichiers :
-- `solution_exerciceN.py` : la solution commentée ;
-- `test_exerciceN.py` : les tests pytest qui la vérifient.
+- `exerciceN.py` : le fichier à compléter (le code est à trouver) ;
+- `test_exerciceN.py` : les tests pytest qui vérifient votre réponse ;
+- `correction_exerciceN.py` : la correction commentée, à ouvrir seulement en cas de blocage.
 
 Les cours s'ouvrent dans un navigateur. Dans l'ordre, commence par la présentation (`01`), puis lis le cours complet (`02`).
 
@@ -42,6 +43,15 @@ pip install -r requirements.txt
 ```bash
 pytest exercices -v                          # tous les exercices
 pytest exercices/exercice_4_product -v       # un seul exercice
+```
+
+Tant que les fichiers ne sont pas complétés, les tests échouent : c'est normal. Lisez le message d'erreur, il dit ce qui manque.
+
+Pour vérifier les corrections à la place de vos fichiers :
+
+```bash
+CORRECTION=1 pytest exercices -v                          # bash (Git Bash, macOS, Linux)
+$env:CORRECTION=1; pytest exercices -v; $env:CORRECTION=$null   # PowerShell
 ```
 
 ## Lancer l'exemple

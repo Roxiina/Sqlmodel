@@ -1,6 +1,7 @@
-"""Exercice 1 — solution.
+"""Exercice 1 — correction.
 
-Tester : pytest exercices/exercice_1_tagread -v
+À ne regarder qu'en cas de blocage !
+Tester la correction : CORRECTION=1 pytest exercices/exercice_1_tagread -v
 """
 
 from sqlmodel import SQLModel, Field, Relationship
