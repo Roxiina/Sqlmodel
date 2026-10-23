@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="fr" class="stage">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQLModel — Quand Pydantic et SQLAlchemy ne font qu'un</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#12141c; --bg-2:#0d0f16; --surface:#1b1e2b; --surface-2:#232739; --border:#2b2f43;
+  --text:#e9eaf2; --text-dim:#a0a6bc;
+  --pydantic:#e1306c; --sqlalchemy:#3e8fc4; --fusion:#f2b84b; --ok:#5cc28a;
+  --radius:14px;
+}
+@media (prefers-color-scheme: light){
+  :root.auto-light{}
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',system-ui,sans-serif;overflow:hidden}
+h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:500;margin:0;letter-spacing:-0.01em}
+code,.mono,pre,textarea{font-family:'IBM Plex Mono',ui-monospace,monospace}
+em{color:var(--text)}
+#deck{position:relative;height:100%;width:100%}
+.slide{position:absolute;inset:0;padding:5vh 6vw 96px;opacity:0;transform:translateX(36px);pointer-events:none;visibility:hidden;transition:opacity .45s ease,transform .45s ease,visibility 0s .45s}
+.slide.active{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .45s ease,transform .45s ease}
+.slide.past{transform:translateX(-36px)}
+.inner{max-width:1180px;margin:0 auto;height:100%;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;padding:4px 2px}
+.eyebrow{color:var(--fusion);font-size:.78rem;font-weight:600;letter-spacing:.08em;margin-bottom:.8rem;text-transform:uppercase}
+h2.t{font-size:clamp(1.7rem,3.2vw,2.7rem);margin-bottom:1rem;line-height:1.12}
+p.l{font-size:clamp(.95rem,1.25vw,1.08rem);line-height:1.65;color:var(--text-dim);margin:0 0 .9rem;max-width:62ch}
+p.l strong{color:var(--text)}
+.mono-i{font-family:'IBM Plex Mono',monospace;font-size:.92em;color:var(--fusion)}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--pydantic),var(--sqlalchemy),var(--fusion));transition:width .4s ease;z-index:50}
+#count{position:fixed;top:16px;right:24px;font:500 .75rem 'IBM Plex Mono',monospace;color:var(--text-dim);z-index:50}
+#nav{position:fixed;bottom:20px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:12px;z-index:50}
+.nb{background:var(--surface);border:1px solid var(--border);color:var(--text);width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+.nb:hover{background:var(--surface-2)}
+#dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:60vw}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--border);border:0;padding:0;cursor:pointer}
+.dot.active{background:var(--fusion);transform:scale(1.5)}
+.dot.done{background:var(--ok)}
+:focus-visible{outline:2px solid var(--fusion);outline-offset:2px}
+.win{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:0 20px 50px -22px rgba(0,0,0,.65)}
+.win .bar{display:flex;align-items:center;gap:6px;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border)}
+.win .bar i{width:9px;height:9px;border-radius:50%;display:block}
+.win .bar span{margin-left:8px;font:.72rem 'IBM Plex Mono',monospace;color:var(--text-dim)}
+.win pre{margin:0;padding:16px 18px;font-size:clamp(.74rem,1vw,.86rem);line-height:1.65;overflow-x:auto;color:#d7dbe8}
+.k{color:var(--fusion)}.s{color:var(--pydantic)}.b{color:var(--sqlalchemy)}.c{color:#6d748c;font-style:italic}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.2rem,3vw,3rem);align-items:center}
+.split.top{align-items:start}
+@media(max-width:900px){.split{grid-template-columns:1fr}.slide{padding:4vh 5vw 96px}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.3rem 1.5rem}
+.card h3{font-size:1.1rem;margin-bottom:.5rem}
+.badges{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem}
+.badge{font-size:.74rem;padding:5px 11px;border-radius:999px;border:1px solid var(--border);color:var(--text-dim)}
+table.cmp{width:100%;border-collapse:collapse;font-size:.9rem}
+table.cmp th,table.cmp td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+table.cmp th{font:500 .7rem 'IBM Plex Mono',monospace;color:var(--text-dim);text-transform:uppercase}
+.no{color:var(--pydantic)}.yes{color:var(--fusion)}
+.toggle{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1rem}
+.toggle button{background:var(--surface);color:var(--text-dim);border:0;padding:9px 16px;font:500 .85rem 'IBM Plex Mono',monospace;cursor:pointer}
+.toggle button.on{background:var(--fusion);color:#171410}
+.res{list-style:none;padding:0;margin:0;font-size:.92rem}
+.res li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);color:var(--text-dim)}
+.res li b{min-width:1.2em}
+.opt{display:block;width:100%;text-align:left;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:11px 14px;border-radius:10px;margin-bottom:8px;cursor:pointer;font:inherit;font-size:.92rem}
+.opt:hover:not([disabled]){border-color:var(--fusion)}
+.opt.correct{border-color:var(--ok);background:rgba(92,194,138,.13)}
+.opt.wrong{border-color:var(--pydantic);background:rgba(225,48,108,.13)}
+.fb{display:none;margin-top:10px;font-size:.88rem;color:var(--text-dim);line-height:1.55}.fb.show{display:block}
+.btn{background:var(--fusion);color:#171410;border:0;padding:9px 16px;border-radius:9px;font:600 .85rem 'IBM Plex Sans',sans-serif;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn:hover{filter:brightness(1.08)}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem}
+textarea.ed{display:block;width:100%;min-height:clamp(180px,32vh,300px);background:var(--bg-2);color:#d7dbe8;border:0;padding:14px 16px;font-size:clamp(.74rem,1vw,.86rem);line-height:1.6;resize:vertical;tab-size:4}
+textarea.ed:focus{outline:none}
+.verdict{margin-top:.8rem;font-size:.9rem;line-height:1.55;padding:.8rem 1rem;border-radius:10px;display:none}
+.verdict.ok{display:block;background:rgba(92,194,138,.13);border:1px solid var(--ok);color:var(--text)}
+.verdict.ko{display:block;background:rgba(225,48,108,.1);border:1px solid var(--pydantic);color:var(--text)}
+.verdict ul{margin:.4rem 0 0;padding-left:1.1rem}
+.hint,.sol{display:none;margin-top:.8rem}.hint.show,.sol.show{display:block}
+.hint{font-size:.9rem;color:var(--text-dim);line-height:1.55;border-left:3px solid var(--fusion);padding-left:12px}
+.stars{color:var(--fusion);letter-spacing:2px;font-size:.9rem}
+.note{font-size:.75rem;color:var(--text-dim);margin-top:.6rem}
+.tree text{font-family:'IBM Plex Mono',monospace}
+.score{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1rem}
+.score div{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;font-size:.88rem;color:var(--text-dim)}
+.score div.ok{border-color:var(--ok);color:var(--text)}
+.agenda{list-style:none;padding:0;margin:0;counter-reset:a;display:grid;grid-template-columns:1fr 1fr;gap:.6rem 2rem}
+.agenda li{counter-increment:a;padding:.7rem 0;border-bottom:1px solid var(--border);font-size:1rem;cursor:pointer}
+.agenda li::before{content:counter(a,decimal-leading-zero);font:500 .78rem 'IBM Plex Mono',monospace;color:var(--fusion);margin-right:.9rem}
+.agenda li:hover{color:var(--fusion)}
+@media(max-width:700px){.agenda{grid-template-columns:1fr}}
+@media print{body{overflow:visible}.slide{position:static;opacity:1;visibility:visible;transform:none;page-break-after:always;height:auto}#nav,#progress,#count{display:none}}
+
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:900px){.vs{grid-template-columns:1fr}}
+.lbl{display:inline-block;font:600 .72rem 'IBM Plex Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:999px;margin-bottom:.5rem}
+.lbl.bad{background:rgba(225,48,108,.15);color:#ff7aa6;border:1px solid var(--pydantic)}
+.lbl.good{background:rgba(92,194,138,.15);color:var(--ok);border:1px solid var(--ok)}
+.win.bad{border-color:rgba(225,48,108,.55)}.win.good{border-color:rgba(92,194,138,.55)}
+.sym{margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:900px){.sym{grid-template-columns:1fr}}
+.sym .card p{margin:0;font-size:.92rem;line-height:1.6;color:var(--text-dim)}
+.sym .card .eyebrow{margin-bottom:.4rem}
+.n{display:inline-flex;align-items:center;justify-content:center;width:1.25em;height:1.25em;border-radius:50%;background:var(--fusion);color:#171410;font:600 .72em 'IBM Plex Sans',sans-serif;margin-left:.6em;vertical-align:middle}
+ol.legend{list-style:none;padding:0;margin:0;counter-reset:l}
+ol.legend li{counter-increment:l;display:flex;gap:.8rem;padding:.55rem 0;border-bottom:1px solid var(--border);font-size:.93rem;color:var(--text-dim);line-height:1.5}
+ol.legend li::before{content:counter(l);flex:0 0 1.5rem;height:1.5rem;border-radius:50%;background:var(--fusion);color:#171410;font:600 .78rem 'IBM Plex Sans',sans-serif;display:flex;align-items:center;justify-content:center;margin-top:.1rem}
+ol.legend strong{color:var(--text)}
+.check{list-style:none;padding:0;margin:0}
+.check li{display:flex;gap:.8rem;padding:.7rem 0;border-bottom:1px solid var(--border);font-size:.98rem;color:var(--text-dim);line-height:1.5}
+.check li::before{content:"✓";color:var(--ok);font-weight:700}
+.check li strong{color:var(--text)}
+.lex-top{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+#lexq{flex:1;min-width:220px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 14px;font:inherit;font-size:.95rem}
+#lexq:focus{outline:2px solid var(--fusion);outline-offset:1px}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap}
+.chip{background:var(--surface);border:1px solid var(--border);color:var(--text-dim);border-radius:999px;padding:6px 12px;font:500 .78rem 'IBM Plex Sans',sans-serif;cursor:pointer}
+.chip.on{background:var(--fusion);color:#171410;border-color:var(--fusion)}
+#lexlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.7rem;overflow-y:auto;padding-right:6px;max-height:58vh}
+.term{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem}
+.term h3{font:600 .98rem 'IBM Plex Mono',monospace;color:var(--fusion);margin:0 0 .3rem}
+.term p{margin:0;font-size:.88rem;line-height:1.55;color:var(--text-dim)}
+.term .cat{float:right;font-size:.66rem;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:2px 8px;margin-left:.5rem}
+.term code{font-size:.82em;color:var(--text);background:var(--bg-2);padding:1px 5px;border-radius:4px}
+#lexcount{font-size:.8rem;color:var(--text-dim)}
+.big{font:500 clamp(2rem,5vw,3.2rem)/1.05 'Fraunces',serif}
+
+/* ===== code expliqué ligne par ligne ===== */
+.cx{margin-bottom:1rem}
+.cx .rows{font-size:clamp(.74rem,1vw,.86rem)}
+.r{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);border-bottom:1px solid rgba(255,255,255,.04)}
+.r:last-child{border-bottom:0}
+.r .cd{display:flex;gap:.8rem;padding:6px 14px;font-family:'IBM Plex Mono',monospace;line-height:1.55;color:#d7dbe8;background:var(--bg-2);white-space:pre-wrap;overflow-wrap:anywhere}
+.r .cd .no{flex:0 0 1.4em;text-align:right;color:#4b516a;user-select:none}
+.r .ex{padding:6px 14px;border-left:2px solid var(--border);color:var(--text-dim);line-height:1.5;display:flex;align-items:center;font-size:.92em;background:var(--surface)}
+.r .ex code{font-family:'IBM Plex Mono',monospace;font-size:.92em;color:var(--fusion)}
+.r:hover .cd{background:#161927}.r:hover .ex{color:var(--text);border-left-color:var(--fusion)}
+.r.blank{grid-template-columns:1fr}.r.blank .cd{padding:3px 14px}.r.blank .ex{display:none}
+.r.x .cd{background:rgba(225,48,108,.13)}.r.x .ex{border-left-color:var(--pydantic);color:var(--text)}
+.r.ok .cd{background:rgba(92,194,138,.12)}.r.ok .ex{border-left-color:var(--ok);color:var(--text)}
+.noex .r{grid-template-columns:1fr}.noex .r .ex{display:none}
+@media(max-width:760px){.r{grid-template-columns:1fr}.r .ex{border-left:0;border-top:1px dashed var(--border)}}
+.lead-in{margin:0 0 .9rem}
+.tools{position:fixed;top:12px;left:18px;z-index:50;display:flex;gap:.5rem}
+.tools button{background:var(--surface);border:1px solid var(--border);color:var(--text-dim);border-radius:8px;padding:5px 10px;font:500 .72rem 'IBM Plex Sans',sans-serif;cursor:pointer}
+.tools button.on{color:#171410;background:var(--fusion);border-color:var(--fusion)}
+.inner{padding-bottom:12px}
+
+/* ===== débutant : encadré, visuels, infobulles ===== */
+.one{display:flex;gap:.8rem;align-items:flex-start;background:rgba(242,184,75,.1);border:1px solid rgba(242,184,75,.45);border-radius:12px;padding:.8rem 1.1rem;margin:0 0 1.1rem;font-size:clamp(.95rem,1.3vw,1.08rem);line-height:1.5;color:var(--text)}
+.one::before{content:"En une phrase";flex:0 0 auto;font:600 .68rem 'IBM Plex Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#171410;background:var(--fusion);border-radius:999px;padding:3px 10px;margin-top:.15rem}
+.gl{border-bottom:1.5px dotted var(--fusion);cursor:help;color:inherit}
+p.l .gl,.card .gl{color:var(--text)}
+#tip{position:fixed;z-index:100;max-width:300px;background:#2a2e44;color:var(--text);border:1px solid var(--fusion);border-radius:10px;padding:.6rem .8rem;font-size:.84rem;line-height:1.45;box-shadow:0 12px 30px -10px rgba(0,0,0,.7);pointer-events:none;opacity:0;transition:opacity .12s}
+#tip.show{opacity:1}
+#tip b{color:var(--fusion);display:block;margin-bottom:.15rem;font-size:.78rem}
+#tip code{font-family:'IBM Plex Mono',monospace;color:var(--fusion);font-size:.9em}
+.fiche{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;max-width:440px}
+.fiche .ft{background:var(--surface-2);padding:.6rem 1rem;font:600 .9rem 'Fraunces',serif}
+.fiche .fl{display:grid;grid-template-columns:5.5rem 1fr auto;gap:.8rem;padding:.55rem 1rem;border-top:1px solid var(--border);align-items:center;font-size:.92rem}
+.fiche .fl b{color:var(--text-dim);font-weight:500}
+.fiche .fl i{font:500 .72rem 'IBM Plex Mono',monospace;color:var(--fusion);background:var(--bg-2);border-radius:6px;padding:2px 8px;font-style:normal}
+.dbt{border-collapse:collapse;font-size:.92rem;width:100%}
+.dbt th{font:500 .74rem 'IBM Plex Mono',monospace;color:var(--fusion);text-align:left;padding:.5rem .8rem;background:var(--surface-2);border:1px solid var(--border)}
+.dbt td{padding:.5rem .8rem;border:1px solid var(--border);color:var(--text)}
+.dbt td.pk{color:var(--fusion);font-family:'IBM Plex Mono',monospace}
+.moule{display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap}
+.moule .m{background:var(--surface);border:2px dashed var(--fusion);border-radius:12px;padding:.9rem 1.1rem;font-size:.92rem;min-width:170px}
+.moule .m b{display:block;font:600 1rem 'Fraunces',serif;margin-bottom:.2rem}
+.moule .arrow{font-size:1.6rem;color:var(--text-dim)}
+.moule .objs{display:grid;gap:.5rem}
+.moule .o{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:.5rem .9rem;font-size:.88rem}
+.decode{display:flex;flex-wrap:wrap;gap:.3rem;align-items:flex-start;margin:.4rem 0 1.1rem}
+.decode .p{display:flex;flex-direction:column;align-items:center;gap:.3rem}
+.decode .p span{font:500 clamp(.95rem,1.8vw,1.3rem) 'IBM Plex Mono',monospace;padding:.35rem .7rem;border-radius:8px;background:var(--bg-2);border:1px solid var(--border)}
+.decode .p em{font:500 .72rem 'IBM Plex Sans',sans-serif;font-style:normal;color:var(--text-dim);text-align:center;max-width:9rem}
+.steps3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem;margin-top:.6rem}
+.steps3 .card h3{font-size:1rem;margin-bottom:.3rem}
+.steps3 .card p{margin:0;font-size:.9rem;line-height:1.55;color:var(--text-dim)}
+.chat{display:grid;gap:.6rem;max-width:520px}
+.chat .b{padding:.6rem .9rem;border-radius:12px;font-size:.9rem;line-height:1.45}
+.chat .q{background:var(--surface-2);border:1px solid var(--border)}
+.chat .a{background:rgba(62,143,196,.15);border:1px solid var(--sqlalchemy)}
+.chat .b small{display:block;color:var(--text-dim);font-size:.72rem;margin-bottom:.15rem}
+
+/* ===== LISIBILITÉ : tout est plus grand et plus contrasté ===== */
+html.mobile{font-size:112.5%}
+:root{--text-dim:#c6cbdf}
+.inner{max-width:1320px}
+.slide{padding:4vh 4vw 104px}
+p.l{font-size:clamp(1.08rem,1.5vw,1.28rem);line-height:1.65;max-width:72ch;color:var(--text-dim)}
+h2.t{font-size:clamp(2rem,3.6vw,3.1rem)}
+.eyebrow{font-size:.9rem}
+.one{font-size:clamp(1.1rem,1.6vw,1.32rem)}
+.one::before{font-size:.8rem}
+.note{font-size:1rem;color:var(--text-dim)}
+.badge{font-size:.95rem;padding:7px 14px}
+#count{font-size:.95rem}
+.tools button{font-size:.88rem;padding:7px 12px}
+.win .bar span{font-size:.95rem}
+.win pre{font-size:clamp(1rem,1.4vw,1.18rem);line-height:1.7}
+.c{color:#9aa3c0}
+.cx .rows{font-size:clamp(1rem,1.4vw,1.18rem)}
+.r{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+.r .cd{padding:9px 16px}
+.r .cd .no{color:#8e95b0}
+.r .ex{font-size:.96em;padding:9px 16px;color:#d4d8ea}
+.r .ex code{font-size:.95em}
+table.cmp{font-size:clamp(1.02rem,1.4vw,1.18rem)}
+table.cmp th{font-size:.9rem}
+.dbt{font-size:1.15rem}.dbt th{font-size:.95rem;padding:.65rem 1rem}.dbt td{padding:.65rem 1rem}
+.fiche{max-width:540px}.fiche .ft{font-size:1.2rem}.fiche .fl{font-size:1.15rem;grid-template-columns:6.5rem 1fr auto}.fiche .fl i{font-size:.9rem}
+.moule .m{font-size:1.15rem}.moule .m b{font-size:1.35rem}.moule .o{font-size:1.1rem;padding:.65rem 1.1rem}.moule .arrow{font-size:2.2rem}
+.decode .p span{font-size:clamp(1.3rem,2.6vw,1.9rem);padding:.45rem .9rem}.decode .p em{font-size:1rem;max-width:12rem}
+.steps3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.steps3 .card h3{font-size:1.25rem}.steps3 .card p{font-size:1.08rem}
+.chat{max-width:640px}.chat .b{font-size:1.12rem;padding:.75rem 1.1rem}.chat .b small{font-size:.85rem}
+.res{font-size:1.15rem}
+.toggle button{font-size:1.05rem;padding:11px 22px}
+.sym .card p{font-size:1.1rem}
+.check li{font-size:1.2rem}
+.agenda li{font-size:1.2rem}
+.lbl{font-size:.9rem;padding:4px 12px}
+.term h3{font-size:1.15rem}.term p{font-size:1.05rem}.term .cat{font-size:.78rem}
+#lexq{font-size:1.1rem}.chip{font-size:.98rem;padding:8px 15px}#lexcount{font-size:1rem}
+#lexlist{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));max-height:56vh}
+#tip{font-size:1.05rem;max-width:360px}#tip b{font-size:.95rem}
+.legend3{display:flex;gap:.6rem 1.4rem;flex-wrap:wrap;margin:.2rem 0 1rem}
+.legend3 span{display:flex;align-items:center;gap:.5rem;font-size:1.15rem;color:var(--text)}
+.legend3 span::before{content:"";width:1rem;height:1rem;border-radius:50%;background:var(--c)}
+/* arbre d'héritage en HTML (texte lisible partout) */
+.tree2{max-width:900px;margin:.4rem auto 1rem;text-align:center}
+.tn{position:relative;background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:.9rem 1.1rem}
+.tn b{display:block;font:600 1.45rem 'Fraunces',serif;color:var(--text)}
+.tn span{display:block;font-size:1.15rem;color:var(--text-dim);margin-top:.15rem}
+.tn em{display:block;font-style:normal;font-size:1.05rem;margin-top:.3rem;color:var(--pydantic)}
+.tn.base{display:inline-block;min-width:260px;border-color:var(--fusion)}.tn.base b{color:var(--fusion)}
+.tn.tbl{border-color:var(--sqlalchemy)}.tn.tbl em{color:var(--sqlalchemy)}
+.tline{width:2px;height:1.6rem;background:var(--border);margin:0 auto}
+.tkids{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;padding-top:1.6rem}
+.tkids::before{content:"";position:absolute;top:0;left:16.67%;right:16.67%;height:2px;background:var(--border)}
+.tkids .tn::before{content:"";position:absolute;top:-1.6rem;left:50%;width:2px;height:1.6rem;background:var(--border)}
+@media(max-width:760px){.tkids{grid-template-columns:1fr;padding-top:0}.tkids::before,.tkids .tn::before,.tline{display:none}.tkids .tn{margin-top:.8rem}}
+@media(max-width:760px){.r{grid-template-columns:1fr}.r .ex{border-left:0;border-top:1px dashed var(--border)}.slide{padding:3vh 4vw 104px}}
+
+/* ===== MODE SCÈNE : la diapo est dessinée sur une scène 1600x900 puis réduite pour tenir dans la fenêtre ===== */
+.inner{justify-content:flex-start}
+.inner>:first-child{margin-top:auto}
+.inner>:last-child{margin-bottom:auto}
+html.stage,html.stage body{overflow:hidden}
+html.stage{font-size:20px}
+html.stage #deck{position:absolute;left:50%;top:50%;width:1600px;height:900px;margin:-450px 0 0 -800px;transform:scale(var(--s,1));transform-origin:center center}
+html.mobile #deck{position:relative;left:auto;top:auto;width:100%;height:100%;margin:0;transform:none}
+html.stage .slide{padding:30px 84px 112px}
+html.stage .inner{max-width:1432px}
+html.stage h2.t{font-size:2rem;margin-bottom:.4rem;line-height:1.1}
+html.stage p.l{font-size:1.02rem;line-height:1.5;max-width:none;margin-bottom:.5rem}
+html.stage .one{font-size:1.05rem;padding:.45rem .9rem;margin-bottom:.6rem}
+html.stage .one::before{font-size:.8rem}
+html.stage .eyebrow{margin-bottom:.25rem;font-size:.85rem}
+html.stage .cx{margin-bottom:.5rem}
+html.stage .cx .rows,html.stage .win pre{font-size:.95rem}
+html.stage .r .cd{padding:4px 14px;line-height:1.45}
+html.stage .r .ex{padding:4px 14px;font-size:.93em;line-height:1.4}
+html.stage table.cmp{font-size:.98rem}
+html.stage table.cmp th,html.stage table.cmp td{padding:7px 12px}
+html.stage .decode .p span{font-size:1.5rem}
+html.stage .split{gap:2rem}
+html.stage .note{font-size:.9rem;margin-top:.3rem}
+html.stage #lexlist{max-height:330px}
+html.stage .steps3{gap:.7rem;margin-top:.3rem}
+html.stage .steps3 .card{padding:.8rem 1rem}
+html.stage .steps3 .card h3{font-size:1.05rem}
+html.stage .steps3 .card p{font-size:.95rem;line-height:1.45}
+html.stage .sym{margin-top:.4rem;gap:.7rem}
+html.stage .sym .card{padding:.7rem 1rem}
+html.stage .sym .card p{font-size:.95rem;line-height:1.45}
+html.stage .check li{font-size:1.05rem;padding:.45rem 0}
+html.stage .agenda li{font-size:1.05rem;padding:.45rem 0}
+html.stage .tn{padding:.6rem .9rem}
+html.stage .tn b{font-size:1.25rem}html.stage .tn span{font-size:1rem}html.stage .tn em{font-size:.92rem}
+html.stage .tkids{padding-top:1.2rem}html.stage .tline{height:1.2rem}
+html.stage .tkids .tn::before{top:-1.2rem;height:1.2rem}
+html.stage .fiche .fl{padding:.4rem 1rem;font-size:1rem}
+html.stage .dbt td,html.stage .dbt th{padding:.45rem .9rem}
+html.stage .chat .b{font-size:.98rem;padding:.55rem .9rem}
+html.stage .moule .m{font-size:1rem}html.stage .moule .o{font-size:.98rem;padding:.45rem .9rem}
+html.stage .lbl{display:none}
+html.stage .toggle button{padding:8px 16px;font-size:.95rem}
+html.stage .evtog{margin:.1rem 0 .5rem}
+/* bascule erreur : À éviter / Correct / Les deux */
+.slide[data-view="bad"] .evgood{display:none}
+.slide[data-view="good"] .evbad{display:none}
+.evtog{margin:.2rem 0 .7rem}
+html.stage #lexlist{max-height:270px}
+html.stage .decode{margin:.2rem 0 .5rem}
+html.stage .tkids .tn{padding:.5rem .8rem}
+html.stage .steps3 .card h3{margin-bottom:.15rem}
+</style>
+</head>
+<body class="noex">
+<div id="tip" role="tooltip"></div><div class="tools"><button id="exbtn" aria-pressed="false" title="Touche E">Afficher les explications ligne à ligne</button></div><div id="progress"></div><div id="count"></div><div id="deck"></div>
+<div id="nav"><button class="nb" id="prev" aria-label="Précédent">‹</button><div id="dots"></div><button class="nb" id="next" aria-label="Suivant">›</button></div>
+<script>
+/* ===== helpers ===== */
+const WIN = (name, body) => `<div class="win"><div class="bar"><i style="background:#e0685c"></i><i style="background:#e0b95c"></i><i style="background:#5cc26a"></i><span>${name}</span></div><pre>${body}</pre></div>`;
+function mergeSVG(w,h,small){
+  const m=h/2,x=w*0.52,sw=small?5:7;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:min(100%,${w+160}px)" role="img" aria-label="Pydantic et SQLAlchemy fusionnent en SQLModel">
+  <path d="M${w*.04},${h*.26} C${w*.32},${h*.26} ${w*.4},${m} ${x},${m}" fill="none" stroke="var(--pydantic)" stroke-width="${sw}" stroke-linecap="round"/>
+  <path d="M${w*.04},${h*.74} C${w*.32},${h*.74} ${w*.4},${m} ${x},${m}" fill="none" stroke="var(--sqlalchemy)" stroke-width="${sw}" stroke-linecap="round"/>
+  <path d="M${x},${m} L${w*.96},${m}" fill="none" stroke="var(--fusion)" stroke-width="${sw+1}" stroke-linecap="round"/>
+  <circle cx="${w*.04}" cy="${h*.26}" r="9" fill="var(--pydantic)"/><circle cx="${w*.04}" cy="${h*.74}" r="9" fill="var(--sqlalchemy)"/><circle cx="${w*.96}" cy="${m}" r="11" fill="var(--fusion)"/>
+  </svg>`;
+}
+
+
+const LEX = [
+ ["Donnée","Les bases","Une information que l'on garde : un nom, un âge, un prix…"],
+ ["Champ","Les bases","Une case d'une fiche : « nom », « âge »… Dans une base de données, un champ correspond à une colonne."],
+ ["Type","Les bases","La nature d'une donnée : texte, nombre entier, nombre à virgule, vrai/faux. Le type dit ce qu'on a le droit d'y mettre."],
+ ["Texte (str)","Les bases","Le type pour du texte. Exemple : <code>\"Ana\"</code>. Écrit <code>str</code> en Python."],
+ ["Nombre entier (int)","Les bases","Le type pour un nombre sans virgule. Exemple : <code>42</code>. Écrit <code>int</code>."],
+ ["Nombre décimal (float)","Les bases","Le type pour un nombre à virgule. Exemple : <code>9.99</code>. Écrit <code>float</code>."],
+ ["Serveur","Les bases","Un ordinateur (ou un programme) qui attend des demandes et y répond."],
+ ["Client","Les bases","Celui qui fait la demande à un serveur : un navigateur, une appli mobile…"],
+ ["Variable","Les bases","Une boîte nommée qui contient une valeur. Exemple : <code>age = 12</code>."],
+ ["Attribut","Les bases","Une information rangée dans un objet, qu'on lit avec un point. Exemple : <code>hero.name</code>."],
+ ["API","Web","Interface qui permet à des programmes de se parler. Exemple : une appli mobile demande des données à un serveur."],
+ ["FastAPI","Web","Bibliothèque Python pour créer des API rapidement. SQLModel a été pensé pour fonctionner avec elle."],
+ ["JSON","Web","Format texte pour échanger des données entre programmes. Exemple : <code>{\"name\": \"Ana\"}</code>."],
+ ["Endpoint (route)","Web","Une adresse précise de l'API qui fait une action. Exemple : <code>/heroes</code> pour lister les héros."],
+ ["response_model","Web","Option de FastAPI qui fixe la forme exacte de la réponse. Seuls les champs du modèle indiqué sont renvoyés."],
+ ["Sérialisation","Web","Transformer un objet Python en texte (souvent JSON) pour l'envoyer. L'inverse s'appelle la désérialisation."],
+ ["Requête HTTP","Web","Message envoyé à une API pour demander quelque chose. Les types courants : GET (lire), POST (créer)."],
+ ["Base de données","Base de données","Endroit organisé où l'on stocke des informations durablement, même quand le programme s'arrête."],
+ ["SQL","Base de données","Langage pour interroger une base de données. Exemple : <code>SELECT * FROM hero</code>."],
+ ["SQLite","Base de données","Base de données simple stockée dans un seul fichier. Pratique pour apprendre et tester."],
+ ["Table","Base de données","Un tableau de la base, comme une feuille Excel. Chaque classe <code>table=True</code> donne une table."],
+ ["Ligne (enregistrement)","Base de données","Une entrée d'une table. Une ligne = un héros, un utilisateur, un livre…"],
+ ["Colonne","Base de données","Une information de la table, comme <code>name</code> ou <code>age</code>. Dans SQLModel, c'est un champ de la classe."],
+ ["Clé primaire","Base de données","Numéro unique qui identifie une ligne. Il ne peut pas se répéter."],
+ ["Clé étrangère","Base de données","Colonne qui contient le numéro d'une ligne d'une autre table. Elle crée le lien entre deux tables."],
+ ["Requête SQL","Base de données","Une instruction envoyée à la base pour lire ou modifier des données."],
+ ["Migration","Base de données","Modification de la structure d'une base déjà utilisée (ajouter une colonne, par exemple), sans perdre les données."],
+ ["Moteur (engine)","Base de données","L'objet qui gère la connexion à la base. Se crée avec <code>create_engine(...)</code>."],
+ ["Session","Base de données","Une « conversation » avec la base. On y ajoute, modifie, lit des objets, puis on valide."],
+ ["Commit","Base de données","Valider définitivement les changements d'une session. Sans commit, rien n'est enregistré."],
+ ["ORM","Base de données","Object-Relational Mapper : permet de manipuler les lignes d'une base comme des objets Python."],
+ ["Bibliothèque","Python","Code déjà écrit par d'autres, qu'on réutilise dans son projet."],
+ ["pip","Python","Outil qui installe des bibliothèques. Exemple : <code>pip install sqlmodel</code>."],
+ ["pytest","Python","Outil qui exécute des tests automatiques sur votre code."],
+ ["Classe","Python","Un moule pour fabriquer des objets du même type."],
+ ["Objet (instance)","Python","Un exemplaire créé à partir d'une classe. <code>Hero(name=\"Ana\")</code> est un objet."],
+ ["Héritage","Python","Une classe fille reprend tout ce que contient sa classe mère et peut y ajouter ses éléments."],
+ ["Annotation de type","Python","Indication du type attendu d'une variable. Exemple : <code>name: str</code>."],
+ ["Type hint","Python","Autre nom de l'annotation de type, en anglais."],
+ ["None","Python","La valeur « rien » en Python. Un champ <code>int | None</code> peut contenir un entier ou rien."],
+ ["Union (|)","Python","Le symbole <code>|</code> dans un type signifie « ou ». <code>int | None</code> : entier ou rien. Demande Python 3.10 ou plus."],
+ ["Valeur par défaut","Python","Valeur utilisée quand on n'en fournit pas. Exemple : <code>age: int | None = None</code>."],
+ ["Autocomplétion","Python","L'éditeur suggère la suite de ce que vous tapez, grâce aux types."],
+ ["Commentaire","Python","Texte précédé de <code>#</code> : une note pour les humains, ignorée par Python."],
+ ["Import","Python","Instruction qui rend disponibles dans le fichier des outils d'une bibliothèque. Exemple : <code>from sqlmodel import Session</code>."],
+ ["Fonction","Python","Bloc de code nommé qu'on peut appeler. Se déclare avec <code>def</code>."],
+ ["Décorateur","Python","Ligne qui commence par <code>@</code> et ajoute un comportement à la fonction en dessous. Exemple : <code>@app.get(\"/heroes\")</code> en fait un endpoint."],
+ ["Gestionnaire de contexte (with)","Python","Bloc <code>with</code> qui ouvre une ressource (une session, un fichier) et la referme proprement à la fin."],
+ ["Paramètre","Python","Valeur qu'une fonction ou une classe reçoit. Exemple : <code>hero_id</code> dans <code>read_hero(hero_id)</code>."],
+ ["Pydantic","Pydantic & SQLModel","Bibliothèque qui vérifie et convertit les données selon des types déclarés."],
+ ["SQLAlchemy","Pydantic & SQLModel","ORM très répandu en Python : il traduit objets Python et requêtes SQL."],
+ ["SQLModel","Pydantic & SQLModel","Bibliothèque qui combine Pydantic et SQLAlchemy dans une seule classe."],
+ ["Modèle","Pydantic & SQLModel","Description d'une donnée : ses champs et leurs types."],
+ ["Schéma","Pydantic & SQLModel","Modèle qui sert à décrire et vérifier des données, sans table en base. C'est une classe sans <code>table=True</code>."],
+ ["Validation","Pydantic & SQLModel","Vérifier qu'une donnée respecte les règles (type, valeur minimale…)."],
+ ["Contrainte","Pydantic & SQLModel","Règle ajoutée à un champ. Exemple : <code>Field(gt=0)</code> impose une valeur supérieure à 0."],
+ ["Field()","Pydantic & SQLModel","Fonction pour configurer un champ : valeur par défaut, clé primaire, contraintes, clé étrangère."],
+ ["table=True","Pydantic & SQLModel","Argument qui transforme une classe en vraie table de base de données."],
+ ["Métadonnées (metadata)","Pydantic & SQLModel","La liste interne des tables connues de SQLModel. <code>create_all</code> s'en sert."],
+ ["create_all","Pydantic & SQLModel","Crée en base les tables de toutes les classes <code>table=True</code> définies."],
+ ["foreign_key","Pydantic & SQLModel","Paramètre de <code>Field</code> qui désigne la colonne visée. Format : <code>\"table.colonne\"</code>."],
+ ["Relationship","Pydantic & SQLModel","Lien côté Python entre deux objets (<code>roman.author</code>), en plus de la clé étrangère."],
+ ["back_populates","Pydantic & SQLModel","Garde les deux côtés d'une relation synchronisés. À déclarer des deux côtés."],
+ ["DRY","Principes","Don't Repeat Yourself : ne pas écrire deux fois la même chose."],
+ ["Drift (dérive)","Principes","Deux copies d'une même information qui ne concordent plus."],
+ ["Fine couche","Principes","Une surcouche légère qui ne remplace pas les outils en dessous. SQLModel reste compatible avec Pydantic et SQLAlchemy."],
+ ["Version 0.x","Principes","Une bibliothèque en 0.x est encore jeune : son comportement peut changer d'une version à l'autre. Fixez la version utilisée."]
+];
+
+const ESS = new Set(["Donnée","Champ","Type","Base de données","Table","Ligne (enregistrement)","Colonne","Clé primaire","API","Classe","Objet (instance)","Héritage","Validation","Bibliothèque","Pydantic","SQLAlchemy","SQLModel","table=True"]);
+const fold=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const LEXMAP={}; LEX.forEach(([t,c,d])=>{ LEXMAP[fold(t)]=d; });
+function lexFind(key){ const k=fold(key); return LEX.find(x=>fold(x[0])===k) || LEX.find(x=>fold(x[0]).startsWith(k+' (')); }
+const slides = [];
+const mi = t => `<span class="mono-i">${t}</span>`;
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function hl(code){
+  return esc(code).replace(/(#.*$)|("[^"]*")|\b(class|def|with|as|return|from|import|None|True|False)\b/g,
+    (m,c,s,k)=> c?`<span class="c">${c}</span>`: s?`<span class="s">${s}</span>`:`<span class="k">${k}</span>`);
+}
+const exp = s => esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
+const R = (c,e,f) => [c,e||'',f||''];
+const BL = ['','',''];
+/* mot souligné : la définition vient du lexique (une seule source) */
+function G(key,label){
+  const hit=lexFind(key);
+  if(!hit) throw new Error('Terme absent du lexique : '+key);
+  return `<span class="gl" tabindex="0" data-term="${esc(hit[0])}">${label||key}</span>`;
+}
+const ONE = t => `<div class="one"><span>${t}</span></div>`;
+function CODEX(name, rows, kind){
+  let n=0;
+  const body=rows.map(r=>{
+    n++;
+    if(!r[0]) return `<div class="r blank"><div class="cd"></div></div>`;
+    return `<div class="r ${r[2]}"><div class="cd"><span class="no">${n}</span><span>${hl(r[0])}</span></div><div class="ex">${exp(r[1])}</div></div>`;
+  }).join('');
+  return `<div class="win cx ${kind||''}"><div class="bar"><i style="background:#e0685c"></i><i style="background:#e0b95c"></i><i style="background:#5cc26a"></i><span>${name}</span></div><div class="rows">${body}</div></div>`;
+}
+const PILLS = (arr) => `<div class="decode">${arr.map(([t,l,c])=>`<div class="p"><span style="${c?`color:${c};border-color:${c}`:''}">${esc(t)}</span><em>${l}</em></div>`).join('')}</div>`;
+const HERO_ID = 'id: int | None = Field(default=None, primary_key=True)';
+const part = (n,t) => `Partie ${n} · ${t}`;
+
+/* ---------- 0 Titre ---------- */
+slides.push({key:'titre',title:"Titre", html:`<div class="inner">
+  <div class="eyebrow">Cours pour débutants · Python</div>
+  <h1 class="big" style="font-size:clamp(2.8rem,8vw,5.4rem)">SQLModel</h1>
+  <p class="l" style="font-size:clamp(1.1rem,2vw,1.4rem);color:var(--text);margin-top:.8rem">Expliqué simplement,<br>sans rien supposer connu.</p>
+  <div style="margin:1.6rem 0 .6rem">${mergeSVG(520,150)}</div>
+  <div class="legend3"><span style="--c:var(--pydantic)">Pydantic · le videur</span><span style="--c:var(--sqlalchemy)">SQLAlchemy · le magasinier</span><span style="--c:var(--fusion)">SQLModel · les deux en un</span></div>
+  <p class="l">Pas besoin de savoir ce qu'est une base de données ou une API : on part de zéro, avec des images de la vie de tous les jours. Chaque morceau de code peut être expliqué <strong>ligne par ligne</strong> : à vous d'activer le bouton en haut à gauche.</p>
+  <div class="badges"><span class="badge">Aucun prérequis</span><span class="badge">Explications ligne par ligne (à activer)</span><span class="badge">Lexique de ${LEX.length} mots</span></div>
+</div>`});
+
+/* ---------- 1 Comment lire ---------- */
+slides.push({key:'lire',title:"Comment lire ce cours", html:`<div class="inner"><div class="eyebrow">Avant de commencer</div><h2 class="t">Comment lire ce cours</h2>
+ ${ONE("Le code s'affiche seul ; un bouton ajoute son explication, ligne par ligne, si vous le souhaitez.")}
+ <div class="steps3">
+  <div class="card"><h3>1. Les mots soulignés</h3><p>Un ${G('Champ','mot souligné en pointillés')} a une définition : survolez-le (ou touchez-le) pour la lire.</p></div>
+  <div class="card"><h3>2. Rouge et vert</h3><p>Une ligne <strong style="color:var(--pydantic)">rouge</strong> est une erreur à éviter. Une ligne <strong style="color:var(--ok)">verte</strong> est la bonne version.</p></div>
+  <div class="card"><h3>3. Le bouton en haut</h3><p>Il est désactivé au départ. Cliquez sur « Afficher les explications ligne à ligne » (ou touche <strong>E</strong>) pour les voir à droite du code.</p></div>
+  <div class="card"><h3>4. Naviguer</h3><p>Flèches ← → du clavier, boutons en bas, ou glissez le doigt sur mobile.</p></div>
+ </div>
+ <p class="l" style="margin-top:.7rem">Rien à retenir par cœur : un <strong>lexique</strong> final reprend tous les mots (filtre « Essentiels » pour commencer).</p>
+</div>`});
+
+/* ---------- 2 Sommaire ---------- */
+slides.push({key:'sommaire',title:"Sommaire", html:`<div class="inner"><div class="eyebrow">Au programme</div><h2 class="t">Le chemin du cours</h2>
+ <ol class="agenda">
+  <li data-go="@donnee">Partie 1 : les bases (données, base de données, API, classe)</li>
+  <li data-go="@outils">Partie 2 : le problème et la solution SQLModel</li>
+  <li data-go="@tabletrue">Comprendre <span class="mono-i">table=True</span></li>
+  <li data-go="@heritage">Partie 3 : aller plus loin (héritage, validation, liens)</li>
+  <li data-go="@cycle">Utiliser ses modèles avec une vraie base</li>
+  <li data-go="@err1">9 erreurs de débutant à éviter</li>
+  <li data-go="@retenir">Ce qu'il faut retenir</li>
+  <li data-go="@lexique">Lexique : tous les mots expliqués</li>
+ </ol>
+ <p class="note">Les parties 1 et 2 suffisent pour comprendre l'idée de SQLModel. La partie 3 est pour aller plus loin.</p></div>`});
+
+/* ================= PARTIE 1 : LES BASES ================= */
+slides.push({key:'donnee',title:"Une donnée", html:`<div class="inner"><div class="eyebrow">${part(1,'les bases')}</div><h2 class="t">Une donnée, des champs, des types</h2>
+ ${ONE("Une fiche est faite de cases (les champs), et chaque case n'accepte qu'un genre de valeur (son type).")}
+ <div class="split"><div>
+  <p class="l">Imaginez une fiche pour un super-héros. Chaque case est un ${G('Champ')} : un nom, un âge… Ce que vous y écrivez est une ${G('Donnée')}.</p>
+  <p class="l">Chaque case n'accepte qu'un certain genre de valeur : c'est son ${G('Type')}. On ne met pas du texte dans une case « âge ».</p>
+  <p class="l">Les types que nous croiserons :</p>
+  <table class="cmp"><tr><th>Type</th><th>Sert à</th><th>Exemple</th></tr>
+   <tr><td>${G('Texte (str)','str')}</td><td>du texte</td><td class="mono-i">"Ana"</td></tr>
+   <tr><td>${G('Nombre entier (int)','int')}</td><td>un nombre sans virgule</td><td class="mono-i">12</td></tr>
+   <tr><td>${G('Nombre décimal (float)','float')}</td><td>un nombre à virgule</td><td class="mono-i">9.99</td></tr></table></div>
+  <div class="fiche"><div class="ft">Fiche « super-héros »</div>
+   <div class="fl"><b>nom</b><span>Ana</span><i>texte</i></div>
+   <div class="fl"><b>âge</b><span>12</span><i>entier</i></div>
+   <div class="fl"><b>pouvoir</b><span>vol</span><i>texte</i></div></div>
+ </div></div>`});
+
+slides.push({key:'bdd',title:"Base de données", html:`<div class="inner"><div class="eyebrow">${part(1,'les bases')}</div><h2 class="t">Une base de données, c'est un classeur de tableaux</h2>
+ ${ONE("Une base de données range les informations dans des tableaux : une fiche = une ligne.")}
+ <div class="split"><div>
+  <p class="l">Une ${G('Base de données')} garde des informations même quand le programme est éteint. Elle ressemble à un classeur Excel.</p>
+  <p class="l">Chaque tableau s'appelle une ${G('Table')}. Chaque fiche est une ${G('Ligne (enregistrement)','ligne')}. Chaque information est une ${G('Colonne','colonne')}.</p>
+  <p class="l">Pour retrouver une ligne sans se tromper, chacune a un numéro unique : la ${G('Clé primaire')}, ici la colonne <span class="mono-i">id</span>.</p></div>
+  <div><div class="card" style="padding:.8rem"><div class="eyebrow" style="margin-bottom:.5rem">Table « hero »</div>
+   <table class="dbt"><tr><th>id</th><th>name</th><th>age</th></tr>
+    <tr><td class="pk">1</td><td>Ana</td><td>12</td></tr>
+    <tr><td class="pk">2</td><td>Léo</td><td>9</td></tr>
+    <tr><td class="pk">3</td><td>Mia</td><td>15</td></tr></table></div>
+   <p class="note">3 lignes, 3 colonnes. La colonne <span class="mono-i">id</span> est la clé primaire. Le langage qui interroge ces tables s'appelle ${G('SQL')}.</p></div>
+ </div></div>`});
+
+slides.push({key:'api',title:"API", html:`<div class="inner"><div class="eyebrow">${part(1,'les bases')}</div><h2 class="t">Une API, c'est un serveur qui répond</h2>
+ ${ONE("Une API est un guichet : un programme pose une question, un autre répond.")}
+ <div class="split"><div>
+  <p class="l">Quand une appli mobile affiche vos messages, elle les demande à un ${G('Serveur')}. L'appli est le ${G('Client')}.</p>
+  <p class="l">Le « guichet » du serveur s'appelle une ${G('API')}. Client et serveur s'échangent des données dans un format texte appelé ${G('JSON')}.</p>
+  <p class="l">Avant de ranger ces données dans la base, l'API doit <strong>vérifier</strong> qu'elles sont correctes. C'est là que nos outils entrent en scène.</p></div>
+  <div class="chat">
+   <div class="b q"><small>Client (appli mobile)</small>Donne-moi le héros numéro 1.</div>
+   <div class="b a"><small>Serveur (API)</small><span class="mono">{"name": "Ana", "age": 12}</span></div>
+   <div class="b q"><small>Client</small>Crée un héros nommé Léo, âge 9.</div>
+   <div class="b a"><small>Serveur</small>C'est vérifié, rangé dans la base, c'est fait.</div></div>
+ </div></div>`});
+
+slides.push({key:'moule',title:"Classe et objet", html:`<div class="inner"><div class="eyebrow">${part(1,'les bases')}</div><h2 class="t">Une classe, c'est un moule</h2>
+ ${ONE("La classe est le moule, les objets sont les gâteaux qu'on en sort.")}
+ <p class="l">En Python, on décrit un genre de chose avec une ${G('Classe')}, comme un moule à gâteaux. Chaque gâteau sorti du moule est un ${G('Objet (instance)','objet')}.</p>
+ <div class="moule" style="margin:1rem 0">
+  <div class="m"><b>Classe Hero</b>un nom<br>un âge</div>
+  <div class="arrow">→</div>
+  <div class="objs"><div class="o">objet : Ana, 12 ans</div><div class="o">objet : Léo, 9 ans</div><div class="o">objet : Mia, 15 ans</div></div>
+ </div>
+ <p class="l">Dans SQLModel, <strong>la classe décrit une fiche</strong> (champs et types) et chaque objet est une fiche remplie. On lit une information avec un point : ${mi("ana.name")} donne « Ana » (un ${G('Attribut')}).</p>
+</div>`});
+
+slides.push({key:'lirecode',title:"Lire une ligne", html:`<div class="inner"><div class="eyebrow">${part(1,'les bases')}</div><h2 class="t">Lire une ligne de code</h2>
+ ${ONE("Une ligne de champ se lit : nom, deux-points, type, et éventuellement « = valeur par défaut ».")}
+ <p class="l">Presque tout le code de ce cours ressemble à ces deux lignes :</p>
+ ${PILLS([["name","le nom du champ","var(--fusion)"],[":","« est de type »",""],["str","texte (obligatoire)","var(--sqlalchemy)"]])}
+ ${PILLS([["age","le nom du champ","var(--fusion)"],[":","« est de type »",""],["int | None","un entier ou rien","var(--sqlalchemy)"],["=","« vaut »",""],["None","rien, si on ne le donne pas","var(--pydantic)"]])}
+ <p class="l">Repères : une ligne qui commence par ${mi("#")} est un ${G('Commentaire')} (note ignorée par Python) ; les espaces au début d'une ligne montrent ce qui appartient à la classe au-dessus.</p>
+</div>`});
+
+/* ================= PARTIE 2 : PROBLÈME ET SOLUTION ================= */
+slides.push({key:'outils',title:"Deux outils", html:`<div class="inner"><div class="eyebrow">${part(2,'le problème et la solution')}</div><h2 class="t">Deux outils pour deux métiers</h2>
+ ${ONE("Il fallait deux outils : un videur qui vérifie, un magasinier qui range.")}
+ <div class="split"><div>
+  <p class="l">Python permet d'utiliser du code écrit par d'autres, rangé dans des ${G('Bibliothèque','bibliothèques')}. Pour une API reliée à une base, deux étaient incontournables :</p>
+  <p class="l"><strong style="color:var(--pydantic)">${G('Pydantic')}</strong> est le <strong>videur</strong> : il vérifie que les données reçues sont correctes (un âge est bien un nombre).</p>
+  <p class="l"><strong style="color:var(--sqlalchemy)">${G('SQLAlchemy')}</strong> est le <strong>magasinier</strong> : il range les données dans la base et les retrouve. On l'appelle un ${G('ORM')}.</p>
+  <p class="l">Le souci : chacun veut qu'on lui décrive les données à sa façon.</p></div>
+  ${WIN("flux.txt",`  Client : « Crée un héros »
+       │
+       ▼
+  <span class="s">[ Pydantic ]</span>     ← vérifie
+       │
+       ▼
+  <span class="b">[ SQLAlchemy ]</span>   ← range
+       │
+       ▼
+  Table dans la base`)}
+ </div></div>`});
+
+slides.push({key:'doublon',title:"Le problème", html:`<div class="inner"><div class="eyebrow">${part(2,'le problème et la solution')}</div><h2 class="t">Le problème : tout écrire deux fois</h2>
+ ${ONE("Pour une seule fiche, on écrivait la même chose dans deux fichiers.")}
+ ${CODEX("models.py — pour le magasinier (SQLAlchemy)",[
+  R('# 1. Modèle SQLAlchemy','Un commentaire : une note pour les humains.'),
+  R('class User(Base):','Crée un moule `User` (un utilisateur), basé sur `Base`, le point de départ de SQLAlchemy.'),
+  R('    __tablename__ = "users"','Le nom du tableau dans la base : « users ».'),
+  R('    id = Column(Integer, primary_key=True)','Colonne `id` : un nombre entier, et c\'est la clé primaire (le numéro unique).'),
+  R('    name = Column(String)','Colonne `name` : du texte.')
+ ])}
+ ${CODEX("schemas.py — pour le videur (Pydantic)",[
+  R('# 2. Schéma Pydantic','Un autre commentaire, dans un autre fichier.'),
+  R('class UserCreate(BaseModel):','Crée un second moule, basé sur `BaseModel`, le point de départ de Pydantic.'),
+  R('    name: str','Champ `name` : du texte. Déjà écrit dans l\'autre fichier : c\'est la répétition.','x')
+ ])}
+</div>`});
+
+slides.push({key:'drift',title:"Le drift", html:`<div class="inner"><div class="eyebrow">${part(2,'le problème et la solution')}</div><h2 class="t">La conséquence : le drift</h2>
+ ${ONE("Quand une information est écrite à deux endroits, un jour les deux ne sont plus d'accord.")}
+ <p class="l">Comparez avec votre numéro de téléphone noté dans deux carnets.</p>
+ <div class="steps3">
+  <div class="card"><h3>1. Deux carnets</h3><p>Le champ <span class="mono-i">name</span> est écrit dans le fichier du magasinier ET dans celui du videur.</p></div>
+  <div class="card"><h3>2. Un changement</h3><p>Demain on renomme ou on change le type du champ. Il faut penser à modifier les deux fichiers.</p></div>
+  <div class="card"><h3>3. Un oubli</h3><p>Si on en oublie un, personne ne prévient : l'API accepte ce que la base ne sait pas ranger. C'est le ${G('Drift','drift')}.</p></div>
+ </div>
+</div>`});
+
+slides.push({key:'solution',title:"La solution", html:`<div class="inner"><div class="eyebrow">${part(2,'le problème et la solution')}</div><h2 class="t">La solution : une seule classe</h2>
+ ${ONE("SQLModel est le videur et le magasinier dans la même personne.")}
+ <p class="l lead-in">${G('SQLModel')} est une ${G('Fine couche','fine couche')} posée sur Pydantic et SQLAlchemy (pas un outil écrit de zéro) : on garde tout ce qu'ils savent faire, sans écrire deux fois. Les types aident aussi l'éditeur (${G('Autocomplétion','autocomplétion')}).</p>
+ ${CODEX("models.py — SQLModel",[
+  R('# Une seule classe pour tout faire','Un commentaire, ignoré par Python.'),
+  R('class User(SQLModel, table=True):','Un seul moule `User`, basé sur `SQLModel`. `table=True` veut dire : « c\'est aussi un vrai tableau dans la base ».','ok'),
+  R('    id: int | None = Field(','Champ `id` : un entier, ou rien (`None`) tant que la fiche n\'est pas rangée.'),
+  R('        default=None, primary_key=True)','Au début l\'id vaut `None` : c\'est la base qui le fabriquera. `primary_key=True` : c\'est la clé primaire.'),
+  R('    name: str','Champ `name` : du texte. Écrit une seule fois, il sert au videur ET au magasinier.','ok')
+ ])}
+</div>`});
+
+slides.push({key:'anatomie',title:"Anatomie", html:`<div class="inner"><div class="eyebrow">${part(2,'le problème et la solution')}</div><h2 class="t">Une classe SQLModel, ligne par ligne</h2>
+ ${ONE("Une ligne par champ : son nom, son type, et sa valeur par défaut s'il y en a une.")}
+ ${CODEX("hero.py",[
+  R('class Hero(SQLModel, table=True):','On crée le moule `Hero`. `table=True` : il correspond à un vrai tableau « hero » dans la base.'),
+  R('    id: int | None = Field(','Champ `id` : un entier, ou rien pour l\'instant.'),
+  R('        default=None, primary_key=True)','`default=None` : rien au départ, la base donnera le numéro. `primary_key=True` : c\'est le numéro unique de la ligne.'),
+  R('    name: str','Champ obligatoire : `name` est du texte, il faut toujours le donner.'),
+  R('    age: int | None = None','Champ facultatif : `age` est un entier ou rien, et vaut `None` si on ne le donne pas.')
+ ])}
+</div>`});
+
+slides.push({key:'utilisation',title:"Utiliser la classe", html:`<div class="inner"><div class="eyebrow">${part(2,'le problème et la solution')}</div><h2 class="t">Utiliser le moule : créer un objet</h2>
+ ${ONE("On sort un objet du moule, puis on lit ses champs avec un point.")}
+ <p class="l lead-in">Reprenons la classe ${mi("Hero")} de la diapo précédente et fabriquons une fiche remplie :</p>
+ ${CODEX("utilisation.py",[
+  R('hero = Hero(name="Ana")','On sort un objet `Hero` du moule. On ne donne que `name`, le seul champ obligatoire.'),
+  R('print(hero.name)  # Ana','`print` affiche à l\'écran. `hero.name` lit le nom : on voit `Ana`.'),
+  R('print(hero.age)   # None','On n\'a pas donné d\'âge : il vaut la valeur par défaut, `None` (rien).'),
+  R('print(hero.id)    # None','La fiche n\'est pas encore rangée en base : pas de numéro pour l\'instant.')
+ ])}
+</div>`});
+
+const TT_INTRO = `<p class="l lead-in">${mi("table=True")} choisit le rôle de la classe : sans lui, un <strong>formulaire de vérification</strong> (rien n'est rangé) ; avec lui, un <strong>registre</strong> (une vraie table dans la base). Basculez pour voir.</p>`;
+slides.push({key:'tabletrue',title:"table=True", html:`<div class="inner"><div class="eyebrow">${part(2,'le problème et la solution')}</div><h2 class="t">Le rôle de ${mi("table=True")}</h2>
+ ${ONE("Sans table=True : un formulaire. Avec table=True : un vrai tableau dans la base.")}
+ ${TT_INTRO}
+ <div class="toggle" role="group" aria-label="Choisir la variante"><button class="on" data-tt="0">sans table=True</button><button data-tt="1">avec table=True</button></div>
+ <div id="tt-code"></div><div class="card"><ul class="res" id="tt-res"></ul></div>
+</div>`});
+
+/* ================= PARTIE 3 : ALLER PLUS LOIN ================= */
+slides.push({key:'heritage',title:"Héritage", html:`<div class="inner"><div class="eyebrow">${part(3,'aller plus loin')}</div><h2 class="t">L'héritage : un modèle par usage</h2>
+ ${ONE("Les champs communs s'écrivent une fois dans une classe de base, les autres classes les reprennent.")}
+ <p class="l lead-in">Pour <em>créer</em> un héros, on donne un nom secret mais pas d'id. Pour l'<em>afficher</em>, on montre l'id mais jamais le nom secret. Trois usages, trois fiches proches : l'${G('Héritage','héritage')} évite de tout réécrire (une classe « fille » reprend tout ce que contient sa « mère »).</p>
+ ${CODEX("heroes.py",[
+  R('class HeroBase(SQLModel):','La classe « mère », sans table. Elle ne contient que ce que tout le monde partage.'),
+  R('    name: str','Champ commun : le nom. Écrit une seule fois.'),
+  R('    age: int | None = None','Champ commun facultatif : l\'âge.'),
+  BL,
+  R('class Hero(HeroBase, table=True):','La vraie table. Elle reprend `name` et `age` de `HeroBase`.','ok'),
+  R('    '+HERO_ID,'Ajoute la clé primaire, fabriquée par la base.'),
+  R('    secret_name: str','Ajoute un champ qui n\'existe que dans la table : le nom secret.'),
+  BL,
+  R('class HeroCreate(HeroBase):','Le formulaire de création, sans `table=True`.'),
+  R('    secret_name: str','Le client donne le nom secret. Pas d\'`id` : il n\'existe pas encore.'),
+  BL,
+  R('class HeroPublic(HeroBase):','La fiche qu\'on montre au public. Elle reprend `name` et `age`.'),
+  R('    id: int','Ajoute l\'`id`. Pas de `secret_name` : il reste privé !')
+ ])}
+</div>`});
+
+slides.push({key:'arbre',title:"Schéma de l'héritage", html:`<div class="inner"><div class="eyebrow">${part(3,'aller plus loin')}</div><h2 class="t">Le schéma de l'héritage</h2>
+ ${ONE("Une classe mère, trois classes filles : chacune ajoute seulement ce qui lui est propre.")}
+ <div class="tree2">
+  <div class="tn base"><b>HeroBase</b><span>name, age</span></div>
+  <div class="tline"></div>
+  <div class="tkids">
+   <div class="tn tbl"><b>Hero</b><span>+ id, secret_name</span><em>table=True</em></div>
+   <div class="tn"><b>HeroCreate</b><span>+ secret_name</span><em>formulaire d'entrée</em></div>
+   <div class="tn"><b>HeroPublic</b><span>+ id</span><em>fiche publique</em></div>
+  </div>
+ </div>
+
+ <div class="steps3">
+  <div class="card"><h3>Hero</h3><p>La vraie table, avec le nom secret.</p></div>
+  <div class="card"><h3>HeroCreate</h3><p>Ce que le client envoie. Pas d'id.</p></div>
+  <div class="card"><h3>HeroPublic</h3><p>Ce que le public voit. Jamais le secret.</p></div>
+ </div>
+</div>`});
+
+slides.push({key:'piege',title:"Piège", html:`<div class="inner"><div class="eyebrow">${part(3,'aller plus loin')}</div><h2 class="t">Le piège : un vérificateur qui ne vérifie pas</h2>
+ ${ONE("Un vrai tableau (table=True) n'est pas vérifié à sa création : il faut un formulaire séparé pour vérifier.")}
+ <p class="l lead-in">La ${G('Validation')} refuse les données absurdes : ${mi("Field(gt=0)")} = « plus grand que 0 ». Surprise : sur une classe ${mi("table=True")}, cette règle n'est <strong>pas appliquée</strong> à la création de l'objet.</p>
+ ${CODEX("piege.py",[
+  R('class Product(SQLModel, table=True):','Un produit, avec un vrai tableau dans la base.'),
+  R('    '+HERO_ID,'La clé primaire, fabriquée par la base.'),
+  R('    price: float = Field(gt=0)','`price` : un nombre à virgule, qui doit être strictement plus grand que 0 (`gt` = « greater than »).'),
+  BL,
+  R('class ProductCreate(SQLModel):','Un formulaire de création, sans table.'),
+  R('    price: float = Field(gt=0)','La même règle, posée sur le formulaire.'),
+  BL,
+  R('Product(price=-10)        # ← aucune erreur','Sur la table, la règle est ignorée : l\'objet est accepté.','x'),
+  R('ProductCreate(price=-10)  # ← ValidationError','Sur le formulaire, la règle s\'applique : Python refuse.','ok')
+ ])}
+ <p class="note">Parade : passer par le formulaire (${mi("ProductCreate")}) avant de construire l'objet de table. Vérifié avec SQLModel 0.0.42 et 0.0.48 ; testez sur votre version.</p>
+</div>`});
+
+slides.push({key:'relations',title:"Relations", html:`<div class="inner"><div class="eyebrow">${part(3,'aller plus loin')}</div><h2 class="t">Relier deux tables</h2>
+ ${ONE("Une clé étrangère relie deux tableaux dans la base, et Relationship relie les deux objets en Python.")}
+ <p class="l lead-in">Un auteur écrit plusieurs romans. Dans le tableau des romans, on note le numéro de l'auteur, comme sur une fiche de bibliothèque : la ${G('Clé étrangère')} (lien <em>dans la base</em>). ${mi("Relationship")} ajoute un raccourci Python : ${mi("roman.author")}.</p>
+ ${CODEX("relations.py",[
+  R('class Author(SQLModel, table=True):','Le tableau des auteurs.'),
+  R('    '+HERO_ID,'La clé primaire.'),
+  R('    name: str','Le nom de l\'auteur.'),
+  R('    novels: list["Novel"] = Relationship(back_populates="author")','Raccourci Python (pas une colonne) : la liste des romans de l\'auteur. `"Novel"` est écrit plus bas, d\'où les guillemets.'),
+  BL,
+  R('class Novel(SQLModel, table=True):','Le tableau des romans.'),
+  R('    '+HERO_ID,'La clé primaire.'),
+  R('    title: str','Le titre du roman.'),
+  R('    author_id: int | None = Field(default=None, foreign_key="author.id")','Clé étrangère : garde le numéro de l\'auteur (colonne `id` du tableau `author`).','ok'),
+  R('    author: Author | None = Relationship(back_populates="novels")','Raccourci : `roman.author` donne l\'auteur. `back_populates` le relie à `Author.novels`.','ok')
+ ])}
+</div>`});
+
+slides.push({key:'cycle',title:"Cycle complet", html:`<div class="inner"><div class="eyebrow">${part(3,'aller plus loin')}</div><h2 class="t">Utiliser ses modèles avec une vraie base</h2>
+ ${ONE("On se branche à la base, on crée les tableaux, on ouvre une session, on ajoute, on valide, on lit.")}
+ <p class="l lead-in">Image : le ${G('Moteur (engine)','moteur')} branche au classeur ; la ${G('Session')} l'ouvre sur votre bureau ; ${mi("add")} pose une fiche ; le ${G('Commit','commit')} la range pour de bon. (Classe ${mi("Hero")} de l'héritage.)</p>
+ ${CODEX("main.py",[
+  R('from sqlmodel import SQLModel, Session, create_engine, select','On va chercher les outils dont on a besoin dans la bibliothèque `sqlmodel`.'),
+  BL,
+  R('engine = create_engine("sqlite:///base.db")','Le moteur : le branchement à la base (ici un simple fichier `base.db`).'),
+  R('SQLModel.metadata.create_all(engine)','Crée dans la base un tableau pour chaque classe `table=True`.'),
+  BL,
+  R('with Session(engine) as session:','Ouvre une session, refermée toute seule à la fin du bloc.'),
+  R('    session.add(Hero(name="Ana", secret_name="X"))','Pose une nouvelle fiche sur le bureau. Rien n\'est encore rangé en base.'),
+  R('    session.commit()','Range la fiche pour de bon dans la base.','ok'),
+  R('    heroes = session.exec(select(Hero)).all()','Demande « tous les héros » : on obtient une liste d\'objets.'),
+  R('    print(heroes)','Affiche cette liste à l\'écran.')
+ ])}
+</div>`});
+
+slides.push({key:'recap',title:"Récap", html:`<div class="inner"><div class="eyebrow">Récapitulatif</div><h2 class="t">Avant et après SQLModel</h2>
+ ${ONE("Une description unique des données, au lieu de deux qui se contredisent.")}
+ <div class="card"><table class="cmp">
+  <tr><th></th><th>Sans SQLModel</th><th>Avec SQLModel</th></tr>
+  <tr><td>Nombre de moules par fiche</td><td class="no">2 au minimum</td><td class="yes">1 de base + de petites variantes</td></tr>
+  <tr><td>Risque que les deux se contredisent</td><td class="no">Élevé</td><td class="yes">Réduit</td></tr>
+  <tr><td>Formulaire ou vrai tableau ?</td><td class="no">Selon l'outil, pas toujours clair</td><td class="yes">Clair : ${mi("table=True")}</td></tr>
+  <tr><td>Aide de l'éditeur de code</td><td class="no">Partielle</td><td class="yes">Complète grâce aux types</td></tr>
+  <tr><td>Fonctions avancées de Pydantic et SQLAlchemy</td><td class="yes">Disponibles</td><td class="yes">Toujours disponibles</td></tr>
+ </table></div></div>`});
+
+/* ================= ERREURS ================= */
+const ERRS = [
+ {t:"Oublier table=True",
+  bad:[R('class Hero(SQLModel):','Pas de `table=True` : la classe reste un simple formulaire.','x'),
+       R('    '+HERO_ID,'On déclare une clé primaire, mais elle ne sert à rien : il n\'y a pas de tableau.'),
+       R('    name: str','Champ texte, vérifié mais jamais rangé.')],
+  good:[R('class Hero(SQLModel, table=True):','`table=True` : la classe devient un vrai tableau dans la base.','ok'),
+        R('    '+HERO_ID,'La clé primaire a maintenant un sens : elle numérote chaque ligne.'),
+        R('    name: str','Colonne texte du tableau.')],
+  sym:`Aucune erreur au début. Mais aucun tableau n'est créé, et plus tard le rangement échoue avec « no such table » (tableau introuvable).`,
+  why:`Dès qu'une fiche doit être rangée en base, ajoutez ${mi("table=True")}. Sans lui, SQLModel ne crée rien.`},
+ {t:"Mettre table=True sur un formulaire d'API",
+  bad:[R('class HeroCreate(HeroBase, table=True):','`table=True` sur un formulaire de création : SQLModel veut créer un tableau de plus.','x'),
+       R('    secret_name: str','Et ce tableau n\'a pas de clé primaire : SQLAlchemy refuse.')],
+  good:[R('class HeroCreate(HeroBase):','Sans `table=True` : un simple formulaire, qui ne crée aucun tableau.','ok'),
+        R('    secret_name: str','Ajoute le nom secret à fournir.')],
+  sym:`Python s'arrête dès la déclaration avec « could not assemble any primary key columns » (impossible de trouver une clé primaire).`,
+  why:`Une seule classe de la famille a ${mi("table=True")} : celle qui porte la clé primaire. Les formulaires d'entrée et de sortie n'en ont pas.`},
+ {t:"Réécrire les mêmes champs partout",
+  bad:[R('class HeroCreate(SQLModel):','Hérite directement de `SQLModel` : rien n\'est partagé.'),
+       R('    name: str','`name` est écrit ici…','x'),
+       R('    age: int | None = None','…`age` aussi…','x'),
+       R('    secret_name: str','Un champ propre à la création.'),
+       BL,
+       R('class HeroPublic(SQLModel):','Elle aussi indépendante.'),
+       R('    id: int','L\'identifiant.'),
+       R('    name: str','…et `name` encore ici…','x'),
+       R('    age: int | None = None','…et `age` encore.','x')],
+  good:[R('class HeroBase(SQLModel):','La classe mère : le seul endroit où `name` et `age` sont écrits.','ok'),
+        R('    name: str','Champ commun.'),
+        R('    age: int | None = None','Champ commun facultatif.'),
+        BL,
+        R('class HeroCreate(HeroBase):','Reprend `name` et `age` : rien à réécrire.'),
+        R('    secret_name: str','N\'ajoute que ce qui lui est propre.'),
+        BL,
+        R('class HeroPublic(HeroBase):','Reprend aussi `name` et `age`.'),
+        R('    id: int','N\'ajoute que l\'`id`.')],
+  sym:`Le code marche, mais ${mi("name")} et ${mi("age")} sont écrits à plusieurs endroits : on retombe dans le ${G('Drift','drift')} que SQLModel devait éviter.`,
+  why:`Mettez ce qui est commun dans une classe mère et faites-la reprendre par les autres. Un champ à ajouter ? Un seul endroit à modifier.`},
+ {t:"Croire qu'une table est vérifiée",
+  bad:[R('class Product(SQLModel, table=True):','Une classe avec un vrai tableau.'),
+       R('    '+HERO_ID,'La clé primaire.'),
+       R('    price: float = Field(gt=0)','On compte sur `gt=0` pour refuser les prix négatifs…'),
+       BL,
+       R('Product(price=-10)  # passe sans erreur','…mais une table n\'est pas vérifiée à la création : l\'objet est accepté avec -10.','x')],
+  good:[R('class ProductCreate(SQLModel):','Un formulaire sans table : c\'est lui qui vérifie.','ok'),
+        R('    price: float = Field(gt=0)','La règle `gt=0` est appliquée ici.'),
+        BL,
+        R('ProductCreate(price=-10)  # ValidationError','Le prix négatif est refusé tout de suite.','ok')],
+  sym:`Un prix négatif entre dans la base sans qu'on vous prévienne. Vérifié avec SQLModel 0.0.42 et 0.0.48.`,
+  why:`Faites vérifier les données par un formulaire sans table (${mi("ProductCreate")}), puis construisez l'objet de table avec des données déjà vérifiées.`},
+ {t:"Montrer la table telle quelle au public",
+  bad:[R('@app.get("/heroes/{hero_id}")','Crée une adresse de l\'API : en lisant `/heroes/1`, on obtient le héros numéro 1.'),
+       R('def read_hero(hero_id: int):','La fonction qui répond. `hero_id` est un entier pris dans l\'adresse.'),
+       R('    return session.get(Hero, hero_id)','Renvoie la fiche complète de la table : tous les champs sortent, `secret_name` compris.','x')],
+  good:[R('@app.get("/heroes/{hero_id}", response_model=HeroPublic)','`response_model=HeroPublic` : on impose la forme de la réponse.','ok'),
+        R('def read_hero(hero_id: int):','La même fonction.'),
+        R('    return session.get(Hero, hero_id)','Le même objet est lu, mais FastAPI n\'envoie que les champs de `HeroPublic`.')],
+  sym:`Tous les champs de la table sortent dans la réponse, y compris ceux qui doivent rester privés, comme ${mi("secret_name")}.`,
+  why:`Créez une fiche publique (${mi("HeroPublic")}) et indiquez-la avec ${mi("response_model")} : seuls ses champs sont envoyés.`},
+ {t:"Se tromper de nom dans foreign_key",
+  bad:[R('class Novel(SQLModel, table=True):','Le tableau des romans.'),
+       R('    '+HERO_ID,'La clé primaire.'),
+       R('    author_id: int | None = Field(','La colonne qui gardera le numéro de l\'auteur.'),
+       R('        default=None, foreign_key="authors.id")','« authors » n\'existe pas : le tableau s\'appelle « author » (nom de la classe, en minuscules).','x')],
+  good:[R('class Novel(SQLModel, table=True):','Le tableau des romans.'),
+        R('    '+HERO_ID,'La clé primaire.'),
+        R('    author_id: int | None = Field(','La colonne qui gardera le numéro de l\'auteur.'),
+        R('        default=None, foreign_key="author.id")','`"author.id"` : la colonne `id` du tableau `author`. Format : `"tableau.colonne"`.','ok')],
+  sym:`Au moment de créer les tableaux : ${mi("NoReferencedTableError")}, c'est-à-dire « le tableau « authors » est introuvable ».`,
+  why:`Par défaut, le tableau porte le nom de la classe <strong>en minuscules, sans pluriel</strong> : la classe ${mi("Author")} donne le tableau ${mi("author")}.`},
+ {t:"Oublier de créer les tableaux",
+  bad:[R('engine = create_engine("sqlite://")','Branchement à une base temporaire, encore vide.'),
+       BL,
+       R('with Session(engine) as session:','Ouvre une session.'),
+       R('    session.add(Hero(name="Ana", secret_name="X"))','Pose une fiche, destinée à un tableau qui n\'existe pas encore.'),
+       R('    session.commit()','Échec ici : « no such table: hero ».','x')],
+  good:[R('engine = create_engine("sqlite://")','Branchement à une base temporaire.'),
+        R('SQLModel.metadata.create_all(engine)','Crée les tableaux de toutes les classes `table=True`.','ok'),
+        BL,
+        R('with Session(engine) as session:','Ouvre une session.'),
+        R('    session.add(Hero(name="Ana", secret_name="X"))','Pose la fiche.'),
+        R('    session.commit()','Range la fiche dans un tableau qui existe.')],
+  sym:`${mi("OperationalError")} : « no such table: hero ». La base existe, mais ses tableaux n'ont jamais été créés.`,
+  why:`Appelez ${mi("SQLModel.metadata.create_all(engine)")} avant le premier accès, une fois toutes vos classes écrites.`},
+ {t:"Oublier session.commit()",
+  bad:[R('with Session(engine) as session:','Ouvre une session.'),
+       R('    session.add(Hero(name="Ana", secret_name="X"))','Pose la fiche sur le bureau.'),
+       R('    # pas de commit','Sans `commit`, la session se ferme et la fiche est jetée.','x')],
+  good:[R('with Session(engine) as session:','Ouvre une session.'),
+        R('    session.add(Hero(name="Ana", secret_name="X"))','Pose la fiche sur le bureau.'),
+        R('    session.commit()','Range la fiche pour de bon.','ok')],
+  sym:`Aucune erreur, mais rien n'est enregistré : en relisant la base, on trouve 0 ligne.`,
+  why:`${mi("add")} ne fait que poser la fiche. Seul ${mi("commit")} la range définitivement.`},
+ {t:"Champ facultatif sans valeur par défaut",
+  bad:[R('class HeroCreate(SQLModel):','Un formulaire de création.'),
+       R('    name: str','Champ obligatoire.'),
+       R('    nickname: str | None','Le type accepte « rien », mais sans valeur par défaut, le champ reste obligatoire.','x')],
+  good:[R('class HeroCreate(SQLModel):','Un formulaire de création.'),
+        R('    name: str','Champ obligatoire.'),
+        R('    nickname: str | None = None','`= None` : si on ne le donne pas, il vaut « rien ». Le champ est facultatif.','ok')],
+  sym:`${mi("HeroCreate(name='Ana')")} provoque une ${mi("ValidationError")} : Python considère que le surnom est obligatoire.`,
+  why:`${mi("| None")} dit que la valeur <em>peut</em> être vide. Seul ${mi("= None")} la rend <em>facultative</em>. Il faut les deux.`}
+];
+const ERR_ONE = [
+ "Sans table=True, SQLModel ne crée aucun tableau.",
+ "Seule la classe qui va dans la base porte table=True.",
+ "Ce qui est commun s'écrit une seule fois, dans une classe mère.",
+ "Un vrai tableau n'est pas vérifié : faites vérifier par un formulaire.",
+ "Ne montrez au public que la fiche publique, jamais la table complète.",
+ "Le nom du tableau est celui de la classe, en minuscules, sans pluriel.",
+ "Créez les tableaux avant de ranger quoi que ce soit.",
+ "Poser une fiche ne suffit pas : il faut la ranger avec commit.",
+ "« Peut être vide » ne suffit pas à rendre un champ facultatif : il faut aussi = None."
+];
+ERRS.forEach((e,i)=>slides.push({key:'err'+(i+1),title:"Erreur "+(i+1), view:'bad', html:`<div class="inner"><div class="eyebrow">Erreur ${i+1} sur ${ERRS.length}</div><h2 class="t">${e.t}</h2>
+ ${ONE(ERR_ONE[i])}
+ <div class="toggle evtog" role="group" aria-label="Choisir ce qu'on affiche"><button class="on" data-ev="bad">✗ À éviter</button><button data-ev="good">✓ Correct</button><button data-ev="both">Les deux</button></div>
+ <div class="evbad"><span class="lbl bad">✗ À éviter</span>${CODEX("incorrect.py",e.bad,"bad")}</div>
+ <div class="evgood"><span class="lbl good">✓ Correct</span>${CODEX("correct.py",e.good,"good")}</div>
+ <div class="sym"><div class="card"><div class="eyebrow" style="color:var(--pydantic)">Ce qui se passe</div><p>${e.sym}</p></div><div class="card"><div class="eyebrow" style="color:var(--ok)">Pourquoi, et quoi faire</div><p>${e.why}</p></div></div>
+</div>`}));
+
+/* ---------- À retenir ---------- */
+slides.push({key:'retenir',title:"À retenir", html:`<div class="inner"><div class="eyebrow">Pour finir</div><h2 class="t">Ce qu'il faut retenir</h2>
+ ${ONE("SQLModel permet de décrire une fois ses données pour les vérifier et les ranger.")}
+ <ul class="check">
+  <li><span><strong>Une classe = une fiche.</strong> Ses champs et leurs types sont écrits une seule fois.</span></li>
+  <li><span>${mi("table=True")} : <strong>sans lui</strong>, un formulaire de vérification ; <strong>avec lui</strong>, un vrai tableau dans la base.</span></li>
+  <li><span><strong>L'héritage</strong> évite de réécrire les champs communs entre la table, le formulaire d'entrée et la fiche publique.</span></li>
+  <li><span><strong>Vérifiez avec un formulaire sans table :</strong> une classe avec table n'est pas vérifiée à sa création.</span></li>
+  <li><span><strong>Pensez au cycle :</strong> ${mi("create_all")} avant de ranger, ${mi("commit")} après.</span></li>
+  <li><span><strong>Testez sur votre version :</strong> SQLModel est encore jeune (version 0.x), son comportement peut évoluer.</span></li>
+ </ul>
+ <p class="note" style="margin-top:1.2rem">Sources : documentation officielle de SQLModel, tutoriel SQL de FastAPI, Python in Plain English, Safe Web Utils, Moltres Docs, Stack Overflow. Les erreurs 1, 2, 4, 6, 7, 8 et 9 ont été vérifiées par des essais réels (SQLModel 0.0.48).</p>
+</div>`});
+
+const CATS = ["Essentiels","Tous","Les bases","Web","Base de données","Python","Pydantic & SQLModel","Principes"];
+slides.push({key:'lexique',title:"Lexique", html:`<div class="inner"><div class="eyebrow">Lexique</div><h2 class="t">Tous les mots, expliqués simplement</h2>
+ <div class="lex-top"><input id="lexq" type="search" placeholder="Chercher un mot (ex. session, clé, validation)…" aria-label="Rechercher dans le lexique" autocomplete="off"><span id="lexcount"></span></div>
+ <div class="chips" id="chips" style="margin-bottom:1rem" role="group" aria-label="Filtrer par catégorie">${CATS.map((c,i)=>`<button class="chip${i?'':' on'}" data-cat="${c}">${c}</button>`).join("")}</div>
+ <div id="lexlist"></div></div>`});
+
+/* résolution des liens du sommaire (data-go="@clé") */
+(function(){
+  const idx={}; slides.forEach((s,i)=>{ idx[s.key]=i; });
+  slides.forEach(s=>{ s.html=s.html.replace(/data-go="@([^"]+)"/g,(m,k)=>{ if(!(k in idx)) throw new Error('Lien de sommaire inconnu : '+k); return 'data-go="'+idx[k]+'"'; }); });
+})();
+/* ===== rendu ===== */
+const deck=document.getElementById('deck'), dotsEl=document.getElementById('dots');
+slides.forEach((s,i)=>{
+  const d=document.createElement('section'); d.className='slide'; d.setAttribute('aria-label',s.title); d.innerHTML=s.html; deck.appendChild(d);
+  const b=document.createElement('button'); b.className='dot'; b.setAttribute('aria-label',(i+1)+' — '+s.title); b.title=s.title; b.onclick=()=>go(i); dotsEl.appendChild(b);
+});
+slides.forEach((s,i)=>{ if(s.view) document.querySelectorAll('.slide')[i].dataset.view=s.view; });
+const els=[...document.querySelectorAll('.slide')], dEls=[...document.querySelectorAll('.dot')];
+let cur=0;
+function paint(){
+  els.forEach((el,i)=>{ el.classList.toggle('active',i===cur); el.classList.toggle('past',i<cur); });
+  dEls.forEach((el,i)=>el.classList.toggle('active',i===cur));
+  document.getElementById('progress').style.width=((cur+1)/slides.length*100)+'%';
+  document.getElementById('count').textContent=String(cur+1).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0');
+}
+function go(i){ cur=Math.max(0,Math.min(slides.length-1,i)); paint(); try{history.replaceState(null,'','#'+(cur+1));}catch(e){} fit(); }
+document.getElementById('prev').onclick=()=>go(cur-1);
+document.getElementById('next').onclick=()=>go(cur+1);
+document.addEventListener('keydown',e=>{
+  const t=e.target.tagName; if(t==='TEXTAREA'||t==='INPUT') return;
+  if(e.key===' '&&t==='BUTTON') return;
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();go(cur+1)}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1)}
+  else if(e.key==='e'||e.key==='E') toggleEx();
+  else if(e.key==='Home')go(0); else if(e.key==='End')go(slides.length-1);
+  else if(e.key==='f'||e.key==='F'){ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); }
+});
+let tx=null;
+document.addEventListener('touchstart',e=>{ if(e.target.closest('#lexlist,input,textarea,pre')) return; tx=e.touches[0].clientX; },{passive:true});
+document.addEventListener('touchend',e=>{ if(tx===null) return; const dx=e.changedTouches[0].clientX-tx; if(Math.abs(dx)>60) go(cur+(dx<0?1:-1)); tx=null; });
+
+/* ===== table=True bascule ===== */
+const TT=[
+ {rows:[R('class Tag(SQLModel):','Hérite de `SQLModel` sans `table=True` : c\'est un schéma.'),
+        R('    name: str','Un champ texte. La classe valide ce champ, mais ne crée aucune table.')],
+  res:[["✓","Validation Pydantic des données"],["✓","Sérialisation JSON pour l'API"],["✗","Table physique en base de données"],["✗","Inscrite dans SQLModel.metadata"]]},
+ {rows:[R('class Tag(SQLModel, table=True):','`table=True` : SQLModel crée une vraie table « tag » et l\'enregistre dans `metadata`.','ok'),
+        R('    '+HERO_ID,'Une table exige une clé primaire : `id`, optionnel, fabriqué par la base.'),
+        R('    name: str','Colonne `name` de la table.')],
+  res:[["✓","Table « tag » créée en base de données"],["✓","Inscrite dans SQLModel.metadata"],["✓","Interrogeable avec une Session"],["!","Pas de validation Pydantic à la création de l'objet"]]}
+];
+function showTT(k){
+  document.getElementById('tt-code').innerHTML=CODEX("tag.py",TT[k].rows);
+  document.getElementById('tt-res').innerHTML=TT[k].res.map(r=>`<li><b style="color:${r[0]==='✓'?'var(--ok)':r[0]==='!'?'var(--fusion)':'var(--pydantic)'}">${r[0]}</b><span>${r[1]}</span></li>`).join('');
+  document.querySelectorAll('[data-tt]').forEach(b=>b.classList.toggle('on',+b.dataset.tt===k));
+  if(typeof fit==='function') fit();
+}
+showTT(0);
+
+/* ===== lexique : recherche + catégories ===== */
+let lexCat='Essentiels';
+const SORTED=[...LEX].sort((a,b)=>a[0].localeCompare(b[0],'fr'));
+function renderLex(){
+  const q=fold(document.getElementById('lexq').value.trim());
+  const list=SORTED.filter(([t,c,d])=>(q||lexCat==='Tous'||(lexCat==='Essentiels'?ESS.has(t):c===lexCat))&&(!q||fold(t).includes(q)||fold(d.replace(/<[^>]+>/g,'')).includes(q)));
+  document.getElementById('lexlist').innerHTML=list.length?list.map(([t,c,d])=>`<div class="term"><span class="cat">${c}</span><h3>${t}</h3><p>${d}</p></div>`).join(''):'<p class="l">Aucun terme trouvé. Essayez un autre mot.</p>';
+  if(typeof fit==='function') setTimeout(fit,0);
+  document.getElementById('lexcount').textContent=list.length+' terme'+(list.length>1?'s':'')+' sur '+LEX.length;
+}
+document.getElementById('lexq').addEventListener('input',renderLex);
+renderLex();
+
+/* ===== clics délégués ===== */
+deck.addEventListener('click',e=>{
+  const t=e.target;
+  if(t.dataset.tt!==undefined) return showTT(+t.dataset.tt);
+  if(t.dataset.ev){ const sl=t.closest('.slide'); sl.dataset.view=t.dataset.ev; t.parentElement.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===t)); return fit(); }
+  if(t.dataset.cat){ lexCat=t.dataset.cat; document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===t)); return renderLex(); }
+  const li=t.closest('[data-go]'); if(li) go(+li.dataset.go);
+});
+const h=parseInt((location.hash||'').slice(1),10); go(isNaN(h)?0:h-1);
+
+/* ===== explications ligne à ligne : afficher / masquer ===== */
+function toggleEx(){
+  const off=document.body.classList.toggle('noex'), b=document.getElementById('exbtn');
+  b.classList.toggle('on',!off); b.setAttribute('aria-pressed',String(!off));
+  b.textContent=off?'Afficher les explications ligne à ligne':'Masquer les explications ligne à ligne';
+  fit();
+}
+document.getElementById('exbtn').addEventListener('click',toggleEx);
+
+/* ===== infobulles : définition d'un mot souligné ===== */
+const tip=document.getElementById('tip');
+function showTip(el){
+  const hit=lexFind(el.dataset.term); if(!hit) return;
+  tip.innerHTML='<b>'+hit[0]+'</b>'+hit[2];
+  const r=el.getBoundingClientRect();
+  tip.classList.add('show');
+  const tw=tip.offsetWidth, th=tip.offsetHeight;
+  let x=Math.min(Math.max(8,r.left),innerWidth-tw-8);
+  let y=r.bottom+8; if(y+th>innerHeight-8) y=Math.max(8,r.top-th-8);
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+function hideTip(){ tip.classList.remove('show'); }
+deck.addEventListener('mouseover',e=>{ const g=e.target.closest('.gl'); if(g) showTip(g); });
+deck.addEventListener('mouseout',e=>{ if(e.target.closest('.gl')) hideTip(); });
+deck.addEventListener('focusin',e=>{ const g=e.target.closest('.gl'); if(g) showTip(g); });
+deck.addEventListener('focusout',hideTip);
+deck.addEventListener('click',e=>{ const g=e.target.closest('.gl'); if(g){ showTip(g); e.stopPropagation(); } else hideTip(); });
+deck.addEventListener('scroll',hideTip,true);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') hideTip(); });
+
+/* ===== mise à l'échelle : tout doit tenir dans la fenêtre ===== */
+function fit(){
+  const s=els[cur]; if(!s) return;
+  const inner=s.querySelector('.inner'); if(!inner) return;
+  inner.style.zoom=''; inner.style.transform=''; inner.style.width=''; inner.style.height='';
+  if(document.documentElement.classList.contains('mobile')) return;
+  const need=inner.scrollHeight, avail=inner.clientHeight;
+  if(need>avail+2){
+    const k=Math.max(0.6,avail/need);
+    if(window.CSS&&CSS.supports&&CSS.supports('zoom','0.5')) inner.style.zoom=k;
+    else { inner.style.transform='scale('+k+')'; inner.style.transformOrigin='top left'; inner.style.width=(100/k)+'%'; inner.style.height=(100/k)+'%'; }
+  }
+}
+function layout(){
+  const de=document.documentElement, mobile=innerWidth<900;
+  de.classList.toggle('mobile',mobile); de.classList.toggle('stage',!mobile);
+  deck.style.setProperty('--s',mobile?1:Math.min(innerWidth/1600,innerHeight/900));
+  fit();
+}
+addEventListener('resize',layout);
+addEventListener('load',layout);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(layout);
+layout();
+</script>
+</body>
+</html>
