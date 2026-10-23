@@ -6,5 +6,8 @@ sqlmodel>=0.0.48
 pydantic>=2.12
 sqlalchemy>=2.0
 
-# Lancer les tests des exercices
+# Notebooks des exercices : noyau Jupyter (VS Code ou Jupyter)
+ipykernel>=6.0
+
+# Tests des exercices (pytest.raises, utilisé dans les cellules de vérification)
 pytest>=9.0

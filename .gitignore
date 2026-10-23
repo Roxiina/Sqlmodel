@@ -5,3 +5,5 @@ venv/
 .env
 *.db
 .vscode/
+.ipynb_checkpoints/
+.pytest_cache/

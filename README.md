@@ -2,7 +2,7 @@
 
 Six exercices sur [SQLModel](https://sqlmodel.tiangolo.com/), la bibliothèque qui réunit **Pydantic** (validation des données) et **SQLAlchemy** (base de données) dans une seule classe Python.
 
-Chaque exercice a un fichier à compléter, des tests pour vérifier sa réponse, et une correction si besoin.
+Chaque exercice est un **notebook Jupyter** : on écrit son code et on le teste en direct, cellule par cellule. Une correction est disponible si besoin.
 
 ## Contenu du dépôt
 
@@ -19,10 +19,9 @@ exercices/
 └── exercice_6_author_novel/
 ```
 
-Chaque dossier d'exercice contient trois fichiers :
-- `exerciceN.py` : le fichier à compléter (le code est à trouver) ;
-- `test_exerciceN.py` : les tests pytest qui vérifient votre réponse ;
-- `correction_exerciceN.py` : la correction commentée, à ouvrir seulement en cas de blocage.
+Chaque dossier d'exercice contient deux notebooks :
+- `exerciceN.ipynb` : l'énoncé, une cellule où écrire son code (le code est à trouver) et une cellule de vérification ;
+- `correction_exerciceN.ipynb` : la correction commentée avec ses explications, à ouvrir seulement en cas de blocage.
 
 Les cours s'ouvrent dans un navigateur. Dans l'ordre, commence par la présentation (`01`), puis lis le cours complet (`02`).
 
@@ -37,21 +36,13 @@ source .venv/bin/activate     # macOS / Linux
 pip install -r requirements.txt
 ```
 
-## Lancer les tests
+## Faire un exercice
 
-```bash
-pytest exercices -v                          # tous les exercices
-pytest exercices/exercice_4_product -v       # un seul exercice
-```
-
-Tant que les fichiers ne sont pas complétés, les tests échouent : c'est normal. Lisez le message d'erreur, il dit ce qui manque.
-
-Pour vérifier les corrections à la place de vos fichiers :
-
-```bash
-CORRECTION=1 pytest exercices -v                          # bash (Git Bash, macOS, Linux)
-$env:CORRECTION=1; pytest exercices -v; $env:CORRECTION=$null   # PowerShell
-```
+1. Ouvrez `exerciceN.ipynb` dans VS Code (extension **Jupyter**) ou dans Jupyter, et choisissez le noyau Python de votre `.venv`.
+2. Lancez la cellule des imports.
+3. Écrivez votre code dans la cellule « Votre code », sous le `TODO`, puis lancez-la.
+4. Lancez la cellule « Vérification » : chaque test s'affiche en ✅ ou en ❌ avec un message qui dit ce qui manque.
+5. Corrigez et relancez autant de fois que nécessaire. Les cellules peuvent être relancées sans erreur.
 
 ## Les exercices
 
@@ -97,7 +88,7 @@ BookBase (title, author)
 - `cours/01_presentation_sqlmodel.html` : les diapositives, les exemples `Hero` / `Author` / `Novel` et l'explication du piège de la validation
 - `cours/02_cours_complet_sqlmodel.html` : le cours détaillé (bases de données, classes, `table=True`, héritage, relations, lexique)
 - `exercices/enonces.md` : les énoncés et les indices
-- `exercices/*/test_exercice*.py` : les tests, qui précisent le comportement attendu de chaque classe
+- les cellules « Vérification » des notebooks : les tests, qui précisent le comportement attendu de chaque classe
 
 ### Sources utilisées pour la présentation
 
@@ -122,4 +113,5 @@ BookBase (title, author)
 - [Pydantic : `Field` et ses contraintes (`gt`, `ge`, `lt`…)](https://docs.pydantic.dev/latest/concepts/fields/) (exercice 4)
 - [SQLAlchemy : les relations entre tables](https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html) (exercice 6)
 - [FastAPI : utiliser une base de données SQL avec SQLModel](https://fastapi.tiangolo.com/tutorial/sql-databases/)
-- [pytest : lancer les tests et filtrer avec `-k`](https://docs.pytest.org/en/stable/how-to/usage.html)
+- [pytest : `pytest.raises`, utilisé dans les tests](https://docs.pytest.org/en/stable/how-to/assert.html)
+- [VS Code : utiliser les notebooks Jupyter](https://code.visualstudio.com/docs/datascience/jupyter-notebooks)
