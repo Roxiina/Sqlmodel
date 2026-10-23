@@ -19,7 +19,7 @@ exercices/
 └── exercice_6_author_novel/
 ```
 
-Chaque dossier d'exercice contient deux fichiers :
+Chaque dossier d'exercice contient trois fichiers :
 - `exerciceN.py` : le fichier à compléter (le code est à trouver) ;
 - `test_exerciceN.py` : les tests pytest qui vérifient votre réponse ;
 - `correction_exerciceN.py` : la correction commentée, à ouvrir seulement en cas de blocage.
