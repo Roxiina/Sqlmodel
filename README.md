@@ -88,9 +88,7 @@ BookBase (title, author)
 - `exercices_sqlmodel_eleve.md` : les énoncés et les indices
 - `test_exercices_sqlmodel.py` : les tests, qui précisent le comportement attendu de chaque classe
 
-### Sources citées par le cours
-
-Le cours et la présentation indiquent avoir été construits à partir de ces sources (bilan de la présentation, dernière page du cours) :
+### Sources utilisées pour la présentation
 
 - [SQLModel Official Documentation](https://sqlmodel.tiangolo.com/)
 - [FastAPI : SQL (Relational) Databases](https://fastapi.tiangolo.com/tutorial/sql-databases/)
@@ -98,8 +96,6 @@ Le cours et la présentation indiquent avoir été construits à partir de ces s
 - *Is SQLModel better than using SQLAlchemy and Pydantic?* (Python in Plain English)
 - *SQL DDL to SQLModel Converter* (Safe Web Utils)
 - *What is table=True inside a subclass of SQLModel?* (Stack Overflow)
-
-Le cours précise aussi que les erreurs présentées ont été vérifiées par des essais réels avec SQLModel 0.0.48.
 
 ### Documentation SQLModel
 
