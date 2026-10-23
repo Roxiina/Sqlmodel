@@ -79,7 +79,30 @@ BookBase (title, author)
 - la **clé étrangère** `author_id = Field(foreign_key="author.id")`, qui est la vraie colonne en base ;
 - la **relation** `Relationship(back_populates=...)`, déclarée des deux côtés, qui permet d'écrire `roman.author.name` en Python.
 
-## Ressources
+## Sources
 
-- [Documentation officielle de SQLModel](https://sqlmodel.tiangolo.com/)
-- [FastAPI : bases de données SQL](https://fastapi.tiangolo.com/tutorial/sql-databases/)
+### Supports du cours (dans ce dépôt)
+
+- `sqlmodel_cours_debutant.html` : le cours pour débutants (bases de données, classes, `table=True`, héritage, relations)
+- `sqlmodel_presentation.html` : les diapositives, les exemples `Hero` / `Author` / `Novel` et l'explication du piège de la validation
+- `exercices_sqlmodel_eleve.md` : les énoncés et les indices
+- `test_exercices_sqlmodel.py` : les tests, qui précisent le comportement attendu de chaque classe
+
+### Documentation SQLModel
+
+- [Page d'accueil de la documentation](https://sqlmodel.tiangolo.com/)
+- [Créer une table avec `table=True`](https://sqlmodel.tiangolo.com/tutorial/create-db-and-table/) (exercices 2 et 3)
+- [Pourquoi `id` vaut `None` avant l'enregistrement](https://sqlmodel.tiangolo.com/tutorial/automatic-id-none-refresh/) (exercice 2)
+- [Plusieurs modèles avec l'héritage : Base / Create / Public](https://sqlmodel.tiangolo.com/tutorial/fastapi/multiple-models/) (exercices 4 et 5)
+- [Créer des tables liées par une clé étrangère](https://sqlmodel.tiangolo.com/tutorial/connect/create-connected-tables/) (exercice 6)
+- [Définir les attributs `Relationship`](https://sqlmodel.tiangolo.com/tutorial/relationship-attributes/define-relationships-attributes/) (exercice 6)
+- [Le rôle de `back_populates`](https://sqlmodel.tiangolo.com/tutorial/relationship-attributes/back-populates/) (exercice 6)
+- [Code source de SQLModel sur GitHub](https://github.com/fastapi/sqlmodel)
+- [Issue #52 : « SQLModel doesn't raise ValidationError »](https://github.com/fastapi/sqlmodel/issues/52), une discussion sur le piège de la validation avec `table=True` (exercice 4)
+
+### Bibliothèques sous-jacentes
+
+- [Pydantic : `Field` et ses contraintes (`gt`, `ge`, `lt`…)](https://docs.pydantic.dev/latest/concepts/fields/) (exercice 4)
+- [SQLAlchemy : les relations entre tables](https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html) (exercice 6)
+- [FastAPI : utiliser une base de données SQL avec SQLModel](https://fastapi.tiangolo.com/tutorial/sql-databases/)
+- [pytest : lancer les tests et filtrer avec `-k`](https://docs.pytest.org/en/stable/how-to/usage.html)
